@@ -128,7 +128,7 @@ export const PRESETS = {
   'End-Season Blitz': {
     tiers:     { t3: true,  t4: true,  t5: true  },
     priority:  [5, 4, 3],
-    startDay:  46,
+    startDay:  50,
     endDay:    50,
     reserve:   0,
     maxPerDay: Infinity,

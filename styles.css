@@ -323,7 +323,6 @@ td,
 /* Digit-slot roll container — ui.js wraps each digit in a clipped span */
 #star-digit-display {
   display: inline-flex;
-  overflow: hidden;
   vertical-align: baseline;
 }
 
@@ -333,11 +332,51 @@ td,
   line-height: 1;
   height: 1.2em;
   vertical-align: bottom;
+  /* min-width prevents layout shift when digit width changes mid-animation */
+  min-width: 0.65ch;
 }
 
-.digit-slot span {
+/*
+ * .digit-inner  — the sliding container; holds .digit-prev then .digit-curr
+ *                 stacked vertically, each exactly 1.2em tall.
+ *
+ * For slide-up   (counter increases): prev on top, curr below.
+ *   translateY(0 → -1.2em) scrolls prev off the top, curr rises into view.
+ *
+ * For slide-down (counter decreases): we need curr to enter from above.
+ *   flex-direction:column-reverse makes curr render on top, prev below.
+ *   translateY(-1.2em → 0) starts with curr above the clip (prev visible),
+ *   then curr falls down into view as prev exits below — correct direction.
+ */
+.digit-inner {
   display: block;
-  transition: transform var(--dur-star) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.digit-prev,
+.digit-curr {
+  display: block;
+  height: 1.2em;
+  line-height: 1.2em;
+}
+
+.digit-slide-up {
+  animation: digit-roll-up var(--dur-star) cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.digit-slide-down {
+  display: flex;
+  flex-direction: column-reverse;
+  animation: digit-roll-down var(--dur-star) cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes digit-roll-up {
+  from { transform: translateY(0);      }
+  to   { transform: translateY(-1.2em); }
+}
+
+@keyframes digit-roll-down {
+  from { transform: translateY(-1.2em); }
+  to   { transform: translateY(0);      }
 }
 
 

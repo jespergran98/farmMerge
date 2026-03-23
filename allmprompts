@@ -92,3 +92,11 @@ The current "Vault Strategy" section in the code/UI is confusing and requires a 
 * **Code Quality:** Look for any other bugs, performance issues, or logic gaps in the current implementation and fix them.
 
 **Goal:** A fully functional, themed, and mathematically accurate simulation that allows users to compare the efficiency of different star-spending behaviors.
+
+---
+
+Do a complete rework of the Vault Strategy visual design and logic. Instead of inputting the detailed strategies, simply have the five presets, and include a short description for each strategy.
+
+End-Season Blitz should for example wait until the final day, and spend all starts on 5-star packs, if it still got remaining stars and can't afford more 5 star it buys 4 star, then 3-star.
+
+Another mode buys 5 stars as soon as it reaches 800 stars and can afford it. Improve the entire vault strategy section with presets that explains their strategy, and make sure the currently selected option has a unique visual design so you can see which one is currently selected.

@@ -152,8 +152,25 @@ export function renderStats(seasonResult, seasonHistory, vaultConfig, currentSea
   const historyLayer  = document.getElementById('season-history-layer');
   const currentLayer  = document.getElementById('current-season-layer');
 
-  if (historyLayer) renderSeasonHistory(historyLayer, seasonHistory);
-  if (currentLayer) renderCurrentSeason(currentLayer, seasonResult, vaultConfig, currentSeasonComparison);
+  if (historyLayer) {
+    renderSeasonHistory(historyLayer, seasonHistory);
+    // Un-hide the layer once there is history to show; re-hide if cleared
+    if (seasonHistory && seasonHistory.length > 0) {
+      historyLayer.removeAttribute('hidden');
+    } else {
+      historyLayer.setAttribute('hidden', '');
+    }
+  }
+
+  if (currentLayer) {
+    renderCurrentSeason(currentLayer, seasonResult, vaultConfig, currentSeasonComparison);
+    // Un-hide once a season has completed
+    if (seasonResult) {
+      currentLayer.removeAttribute('hidden');
+    } else {
+      currentLayer.setAttribute('hidden', '');
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -489,6 +506,9 @@ function buildAverageCard(label, records) {
 
 function renderCurrentSeason(container, seasonResult, vaultConfig, comparison) {
   if (!seasonResult) { container.innerHTML = ''; return; }
+
+  // Ensure the container itself is visible
+  container.removeAttribute('hidden');
 
   // Find or create each subsection target by ID
   renderSeasonSummary(document.getElementById('stats-season-summary'),       seasonResult);
@@ -1170,34 +1190,174 @@ function renderWaterfall(chartEl, summaryEl, r) {
 
 // ── 7. Strategy Comparison ───────────────────────────────────────────────
 
-function renderStrategyComparison(tbody, seasonResult, comparison) {
-  if (!tbody || !comparison) return;
-  tbody.innerHTML = '';
+/**
+ * The 4 key spending scenarios mapped to preset names, with human-readable
+ * descriptions of what each scenario means in plain game terms.
+ */
+const SCENARIO_CARDS = [
+  {
+    preset:      'Spend Greedily',
+    icon:        '⚡',
+    scenarioTag: 'Spend Immediately',
+    question:    'What if you buy packs as soon as you can afford them?',
+    tradeoff:    'Maximum pack count, but stars get spread across all tiers — including cheap 3★ packs that may not be the best value.',
+    tip:         'Good for early collection, but leaves fewer stars for high-value 5★ packs later.',
+  },
+  {
+    preset:      '5★ Only',
+    icon:        '🏆',
+    scenarioTag: 'Best Packs Only',
+    question:    'What if you only ever open 5★ Vault packs (800★ each)?',
+    tradeoff:    'Every purchase guarantees a new Legendary sticker — but you need 800 stars per pack, so you open far fewer packs total.',
+    tip:         'Pay attention to whether you ever reach 800★. If not, this strategy earns zero vault stickers.',
+  },
+  {
+    preset:      'End-Season Blitz',
+    icon:        '⏰',
+    scenarioTag: 'Last-Minute Splurge',
+    question:    'What if you hoard stars all season and spend everything in the final 5 days?',
+    tradeoff:    'You enter the end-season with the most stars possible, spending 5★ → 4★ → 3★. Stars are used efficiently but you lose the chance to compound early vault gains.',
+    tip:         'Strong on high-star seeds. Compare its final star balance vs Spend Greedily to see how much was hoarded.',
+  },
+  {
+    preset:      'Hoard Then Spend',
+    icon:        '📦',
+    scenarioTag: 'Mid-Season Inflection',
+    question:    'What if you wait until the midpoint (Day 26) before opening any Vault packs?',
+    tradeoff:    'A balance between accumulating stars early and having time to benefit from newly collected stickers. The progress chart will show a visible acceleration at Day 26.',
+    tip:         'A middle ground: more stars than Spend Greedily but more time to use them than End-Season Blitz.',
+  },
+];
 
-  const userLabel  = comparison.userPresetLabel;
-  const isCustom   = userLabel === 'Custom';
+function renderStrategyComparison(tbody, seasonResult, comparison) {
+  // tbody here is actually the parent container — we need the full section
+  if (!tbody || !comparison) return;
+
+  // Walk up to find the table and its wrapper so we can prepend scenario cards
+  const table = tbody.closest('table');
+  const section = table ? table.closest('section') : null;
+
+  // ── Build / refresh the scenario card strip ──────────────────────────────
+  const existingStrip = section ? section.querySelector('.scenario-strip') : null;
+  if (existingStrip) existingStrip.remove();
+
   const presetRes  = comparison.presetResults;
   const userResult = comparison.userSeasonResult;
+  const userLabel  = comparison.userPresetLabel;
 
-  // Build row data
+  if (section) {
+    const strip = el('div', { className: 'scenario-strip' });
+
+    const neverSpend = presetRes['Never Spend'];
+    const baselineUnique = neverSpend ? neverSpend.finalUniqueCount : 0;
+
+    SCENARIO_CARDS.forEach(card => {
+      const res = presetRes[card.preset];
+      if (!res) return;
+
+      const unique      = res.finalUniqueCount;
+      const starsSpent  = res.starsSpentByTier.tier3 + res.starsSpentByTier.tier4 + res.starsSpentByTier.tier5;
+      const pct         = Math.round(unique / 108 * 100);
+      const gain        = unique - baselineUnique;
+      const efficiency  = starsSpent > 0 ? Math.round(gain / starsSpent * 100) : 0;
+      const color       = resolveColor(presetColorVar(card.preset));
+      const isUser      = userLabel === card.preset;
+      const complete    = unique === 108;
+
+      const cardEl = el('div', {
+        className: 'scenario-card' + (isUser ? ' scenario-card--active' : '') + (complete ? ' scenario-card--complete' : ''),
+        style: { borderTopColor: color },
+      });
+
+      // Header row
+      cardEl.appendChild(el('div', { className: 'sc-header' },
+        el('span', { className: 'sc-icon' }, card.icon),
+        el('span', { className: 'sc-tag', style: { color } }, card.scenarioTag),
+        isUser ? el('span', { className: 'sc-you-badge' }, '▶ Your Config') : null,
+      ));
+
+      // Question
+      cardEl.appendChild(el('p', { className: 'sc-question' }, card.question));
+
+      // Key metrics row
+      const metricsRow = el('div', { className: 'sc-metrics' });
+
+      // Sticker count + progress bar
+      const barWrap = el('div', { className: 'sc-bar-wrap' });
+      const barTrack = el('div', { className: 'sc-bar-track' });
+      const barFill  = el('div', {
+        className: 'sc-bar-fill',
+        style: { width: pct + '%', background: color },
+      });
+      barTrack.appendChild(barFill);
+      barWrap.appendChild(el('div', { className: 'sc-bar-label' },
+        el('strong', { style: { color } }, `${unique} / 108`),
+        el('span', { className: 'sc-pct' }, ` (${pct}%)${complete ? ' ✓ Complete!' : ''}`),
+      ));
+      barWrap.appendChild(barTrack);
+      metricsRow.appendChild(barWrap);
+
+      // Stats grid
+      const statsGrid = el('div', { className: 'sc-stats-grid' });
+      const addStat = (label, value, highlight) => {
+        const item = el('div', { className: 'sc-stat' });
+        item.appendChild(el('div', { className: 'sc-stat-label' }, label));
+        const v = el('div', { className: 'sc-stat-value' + (highlight ? ' sc-stat-highlight' : '') }, value);
+        if (highlight) v.style.color = color;
+        item.appendChild(v);
+        statsGrid.appendChild(item);
+      };
+
+      addStat('Stars spent',   `${fmt(starsSpent)}★`);
+      addStat('Stars left',    `${fmt(res.finalStars)}★`);
+      addStat('Vault 5★ packs', String(res.vaultPurchasesByTier.tier5), true);
+      addStat('Vault 4★ packs', String(res.vaultPurchasesByTier.tier4));
+      addStat('Vault 3★ packs', String(res.vaultPurchasesByTier.tier3));
+      addStat('Gain vs no vault', gain > 0 ? `+${gain} stickers` : '—', gain > 0);
+      if (starsSpent > 0) {
+        addStat('Efficiency',    `${efficiency} stk/100★`);
+      }
+
+      metricsRow.appendChild(statsGrid);
+      cardEl.appendChild(metricsRow);
+
+      // Tradeoff + tip
+      cardEl.appendChild(el('p', { className: 'sc-tradeoff' }, `⚖️ ${card.tradeoff}`));
+      cardEl.appendChild(el('p', { className: 'sc-tip' }, `💡 ${card.tip}`));
+
+      strip.appendChild(cardEl);
+    });
+
+    // Insert strip before the table wrapper
+    const tableWrapper = section.querySelector('.table-wrapper');
+    if (tableWrapper) {
+      section.insertBefore(strip, tableWrapper);
+    } else {
+      section.appendChild(strip);
+    }
+  }
+
+  // ── Table rows (legacy compact view below the cards) ─────────────────────
+  tbody.innerHTML = '';
+
+  const isCustom = userLabel === 'Custom';
   const rows = [];
 
   PRESET_ORDER.forEach(preset => {
     const res = presetRes[preset];
     if (!res) return;
-    // If user matches this preset exactly, use user's result (same data, labeled as preset)
     const useUserResult = !isCustom && preset === userLabel;
     const result = useUserResult ? userResult : res;
     rows.push({
-      label: preset,
-      uniqueCount:     result.finalUniqueCount,
-      starsSpent:      result.starsSpentByTier.tier3 + result.starsSpentByTier.tier4 + result.starsSpentByTier.tier5,
-      vault3:          result.vaultPurchasesByTier.tier3,
-      vault4:          result.vaultPurchasesByTier.tier4,
-      vault5:          result.vaultPurchasesByTier.tier5,
-      starsLeft:       result.finalStars,
-      annotation:      PRESET_ANNOTATIONS[preset],
-      isUserRow:       useUserResult,
+      label:        preset,
+      uniqueCount:  result.finalUniqueCount,
+      starsSpent:   result.starsSpentByTier.tier3 + result.starsSpentByTier.tier4 + result.starsSpentByTier.tier5,
+      vault3:       result.vaultPurchasesByTier.tier3,
+      vault4:       result.vaultPurchasesByTier.tier4,
+      vault5:       result.vaultPurchasesByTier.tier5,
+      starsLeft:    result.finalStars,
+      annotation:   PRESET_ANNOTATIONS[preset],
+      isUserRow:    useUserResult,
     });
   });
 
@@ -1215,52 +1375,49 @@ function renderStrategyComparison(tbody, seasonResult, comparison) {
     });
   }
 
-  // Find best unique count
   const bestUnique = Math.max(...rows.map(r => r.uniqueCount));
 
   rows.forEach(row => {
-    const isBest  = row.uniqueCount === bestUnique;
-    const color   = presetColorVar(row.label === 'Your Config' ? 'Custom' : row.label);
-    const tr      = el('tr', { className: isBest ? 'row-best' : '' });
+    const isBest = row.uniqueCount === bestUnique;
+    const color  = presetColorVar(row.label === 'Your Config' ? 'Custom' : row.label);
+    const tr     = el('tr', { className: isBest ? 'row-best' : '' });
 
     if (isBest) {
-      tr.style.background     = 'rgba(125, 170, 114, 0.15)';
-      tr.style.fontWeight     = '700';
+      tr.style.background = 'rgba(125, 170, 114, 0.15)';
+      tr.style.fontWeight = '700';
     }
     if (row.isUserRow) {
-      tr.style.borderLeft     = `3px solid ${resolveColor(color)}`;
+      tr.style.borderLeft = `3px solid ${resolveColor(color)}`;
     }
 
+    // Completion %
+    const compPct = (row.uniqueCount / 108 * 100).toFixed(1);
+
     // Inline bar cell
-    const barPct = (row.uniqueCount / 108 * 100).toFixed(1);
-    const barCell = el('td', { className: 'comparison-bar-cell' });
+    const barCell  = el('td', { className: 'comparison-bar-cell' });
     const barTrack = el('div', { className: 'comparison-bar-track' });
-    const barFill  = el('div', { className: 'comparison-bar-fill',
-      style: { width: barPct + '%', background: resolveColor(color) } });
+    const barFill  = el('div', {
+      className: 'comparison-bar-fill',
+      style: { width: compPct + '%', background: resolveColor(color) },
+    });
     barTrack.appendChild(barFill);
-
-    const labelSpan = el('span', { className: 'comparison-label',
-      style: { color: resolveColor(color) } }, row.label);
-
-    barCell.appendChild(labelSpan);
+    barCell.appendChild(el('span', { className: 'comparison-label',
+      style: { color: resolveColor(color) } }, row.label));
     barCell.appendChild(barTrack);
 
     tr.append(
       barCell,
-      el('td', { className: 'num-cell' },
-        `${row.uniqueCount} / 108` + (isBest ? ' ✓' : '')),
+      el('td', { className: 'num-cell' }, `${row.uniqueCount} / 108${isBest ? ' ✓' : ''}`),
+      el('td', { className: 'num-cell' }, `${compPct}%`),
       el('td', { className: 'num-cell' }, `${fmt(row.starsSpent)}★`),
-      el('td', { className: 'num-cell' }, String(row.vault3)),
-      el('td', { className: 'num-cell' }, String(row.vault4)),
       el('td', { className: 'num-cell' }, String(row.vault5)),
       el('td', { className: 'num-cell' }, `${fmt(row.starsLeft)}★`),
     );
 
     tbody.appendChild(tr);
 
-    // Annotation row
     const annotationTr = el('tr', { className: 'annotation-row' });
-    const annotationTd = el('td', { colSpan: '7', className: 'annotation-cell' },
+    const annotationTd = el('td', { colSpan: '6', className: 'annotation-cell' },
       el('em', {}, row.annotation));
     annotationTr.appendChild(annotationTd);
     tbody.appendChild(annotationTr);
