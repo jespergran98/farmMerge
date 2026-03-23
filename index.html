@@ -159,156 +159,67 @@
 
       <!-- ── Vault strategy ─────────────────────────────────── -->
       <div id="vault-group" class="control-group">
-        <h2 class="control-group-label">
-          Vault Strategy
-          <span id="active-preset-label" aria-live="polite">
-            — <strong id="preset-name-display">Custom</strong>
-          </span>
-        </h2>
+        <h2 class="control-group-label">Vault Strategy</h2>
 
-        <!-- Preset buttons -->
-        <div id="preset-buttons" class="preset-btn-row" role="group" aria-label="Vault strategy presets">
-          <button type="button" class="preset-btn" data-preset="spend-greedily">Spend Greedily</button>
-          <button type="button" class="preset-btn" data-preset="5star-only">5★ Only</button>
-          <button type="button" class="preset-btn" data-preset="hoard-then-spend">Hoard Then Spend</button>
-          <button type="button" class="preset-btn" data-preset="end-season-blitz">End-Season Blitz</button>
-          <button type="button" class="preset-btn" data-preset="never-spend">Never Spend</button>
-        </div>
+        <!-- Hidden fields kept for engine compatibility -->
+        <input type="checkbox" id="vault-tier-3"    name="vault-tier-3"    style="display:none">
+        <input type="checkbox" id="vault-tier-4"    name="vault-tier-4"    style="display:none">
+        <input type="checkbox" id="vault-tier-5"    name="vault-tier-5"    style="display:none">
+        <input type="number"   id="vault-start-day" name="vault-start-day" style="display:none" value="1">
+        <input type="number"   id="vault-end-day"   name="vault-end-day"   style="display:none" value="50">
+        <input type="number"   id="vault-reserve"   name="vault-reserve"   style="display:none" value="0">
+        <input type="checkbox" id="vault-unlimited" name="vault-unlimited" style="display:none" checked>
+        <input type="number"   id="vault-max-per-day" name="vault-max-per-day" style="display:none" value="1">
 
-        <!-- Enabled vault tiers -->
-        <fieldset id="vault-tiers-fieldset">
-          <legend>Enabled vault tiers</legend>
-          <label class="checkbox-label">
-            <input type="checkbox" id="vault-tier-3" name="vault-tier-3" value="3">
-            3★ pack (250★)
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="vault-tier-4" name="vault-tier-4" value="4">
-            4★ pack (500★)
-          </label>
-          <label class="checkbox-label">
-            <input type="checkbox" id="vault-tier-5" name="vault-tier-5" value="5">
-            5★ pack (800★)
-          </label>
-        </fieldset>
+        <!-- Preset cards -->
+        <div id="preset-cards" role="group" aria-label="Vault strategy presets">
 
-        <!-- Purchase priority order -->
-        <div id="priority-section">
-          <p id="priority-label" class="field-label">Purchase priority order</p>
-          <ol
-            id="priority-list"
-            aria-labelledby="priority-label"
-            aria-describedby="priority-hint">
-            <li class="priority-item" data-tier="5">
-              <span class="priority-tier-label">5★</span>
-              <div class="priority-btn-group">
-                <button
-                  type="button"
-                  class="priority-btn priority-up"
-                  data-direction="up"
-                  data-tier="5"
-                  aria-label="Move 5★ tier up in priority">▲</button>
-                <button
-                  type="button"
-                  class="priority-btn priority-down"
-                  data-direction="down"
-                  data-tier="5"
-                  aria-label="Move 5★ tier down in priority">▼</button>
-              </div>
-            </li>
-            <li class="priority-item" data-tier="4">
-              <span class="priority-tier-label">4★</span>
-              <div class="priority-btn-group">
-                <button
-                  type="button"
-                  class="priority-btn priority-up"
-                  data-direction="up"
-                  data-tier="4"
-                  aria-label="Move 4★ tier up in priority">▲</button>
-                <button
-                  type="button"
-                  class="priority-btn priority-down"
-                  data-direction="down"
-                  data-tier="4"
-                  aria-label="Move 4★ tier down in priority">▼</button>
-              </div>
-            </li>
-            <li class="priority-item" data-tier="3">
-              <span class="priority-tier-label">3★</span>
-              <div class="priority-btn-group">
-                <button
-                  type="button"
-                  class="priority-btn priority-up"
-                  data-direction="up"
-                  data-tier="3"
-                  aria-label="Move 3★ tier up in priority">▲</button>
-                <button
-                  type="button"
-                  class="priority-btn priority-down"
-                  data-direction="down"
-                  data-tier="3"
-                  aria-label="Move 3★ tier down in priority">▼</button>
-              </div>
-            </li>
-          </ol>
-          <p id="priority-hint" class="field-hint">
-            Top = purchased first. Disabled tiers are removed automatically.
-          </p>
-        </div>
+          <button type="button" class="preset-card" data-preset="spend-greedily" aria-pressed="true">
+            <span class="preset-card__icon">💸</span>
+            <div class="preset-card__body">
+              <span class="preset-card__name">Spend Greedily</span>
+              <span class="preset-card__desc">Buy the highest-tier pack you can afford every day, starting from day 1. Never hold back.</span>
+            </div>
+            <span class="preset-card__check" aria-hidden="true">✓</span>
+          </button>
 
-        <!-- Spending window -->
-        <div class="field-row">
-          <label for="vault-start-day">Start spending on day</label>
-          <input
-            type="number"
-            id="vault-start-day"
-            name="vault-start-day"
-            min="1"
-            max="50"
-            value="1">
-        </div>
-        <div class="field-row">
-          <label for="vault-end-day">Stop spending after day</label>
-          <input
-            type="number"
-            id="vault-end-day"
-            name="vault-end-day"
-            min="1"
-            max="50"
-            value="50">
-        </div>
+          <button type="button" class="preset-card" data-preset="5star-only" aria-pressed="false">
+            <span class="preset-card__icon">⭐</span>
+            <div class="preset-card__body">
+              <span class="preset-card__name">5★ Only</span>
+              <span class="preset-card__desc">Save stars exclusively for 5★ vault packs (800★ each). Ignore 3★ and 4★ packs entirely.</span>
+            </div>
+            <span class="preset-card__check" aria-hidden="true">✓</span>
+          </button>
 
-        <!-- Star reserve -->
-        <div class="field-row">
-          <label for="vault-reserve">Minimum star reserve</label>
-          <input
-            type="number"
-            id="vault-reserve"
-            name="vault-reserve"
-            min="0"
-            value="0">
-        </div>
+          <button type="button" class="preset-card" data-preset="hoard-then-spend" aria-pressed="false">
+            <span class="preset-card__icon">🏦</span>
+            <div class="preset-card__body">
+              <span class="preset-card__name">Hoard Then Spend</span>
+              <span class="preset-card__desc">Accumulate stars for the first half of the season, then spend freely on all tiers from day 26 onward.</span>
+            </div>
+            <span class="preset-card__check" aria-hidden="true">✓</span>
+          </button>
 
-        <!-- Max purchases per day -->
-        <div id="max-per-day-section">
-          <div class="field-row field-row--inline">
-            <label for="vault-unlimited">Unlimited purchases/day</label>
-            <input
-              type="checkbox"
-              id="vault-unlimited"
-              name="vault-unlimited"
-              checked>
-          </div>
-          <div class="field-row" id="max-per-day-row" hidden>
-            <label for="vault-max-per-day">Max purchases/day</label>
-            <input
-              type="number"
-              id="vault-max-per-day"
-              name="vault-max-per-day"
-              min="1"
-              value="1">
-          </div>
-        </div>
+          <button type="button" class="preset-card" data-preset="end-season-blitz" aria-pressed="false">
+            <span class="preset-card__icon">🚀</span>
+            <div class="preset-card__body">
+              <span class="preset-card__name">End-Season Blitz</span>
+              <span class="preset-card__desc">Hold every star until the final day, then spend all at once — 5★ packs first, then 4★, then 3★.</span>
+            </div>
+            <span class="preset-card__check" aria-hidden="true">✓</span>
+          </button>
+
+          <button type="button" class="preset-card" data-preset="never-spend" aria-pressed="false">
+            <span class="preset-card__icon">🔒</span>
+            <div class="preset-card__body">
+              <span class="preset-card__name">Never Spend</span>
+              <span class="preset-card__desc">Never visit the Star Vault. Stars are collected from duplicates but never used — pure baseline run.</span>
+            </div>
+            <span class="preset-card__check" aria-hidden="true">✓</span>
+          </button>
+
+        </div><!-- end #preset-cards -->
 
       </div><!-- end #vault-group -->
 

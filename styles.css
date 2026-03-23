@@ -656,146 +656,176 @@ input[type="checkbox"] {
 /* ── Vault strategy ───────────────────────────────────────────────────────── */
 
 #vault-group {
-  gap: 5px;
+  gap: 6px;
 }
 
 #vault-group .control-group-label {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  flex-wrap: wrap;
+  margin-bottom: 2px;
 }
 
-#active-preset-label {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.72rem;
-  color: #8B6040;
-  font-style: italic;
-}
-
-#preset-name-display {
-  font-style: normal;
-  font-family: 'Fredoka One', serif;
-  color: var(--color-brown);
-}
-
-/* Preset buttons row */
-.preset-btn-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.preset-btn {
-  font-family: 'Fredoka One', serif;
-  font-size: 0.72rem;
-  padding: 4px 8px;
-  border-radius: 12px;
-  border: 1.5px solid var(--color-brown);
-  background: var(--color-cream);
-  color: var(--color-brown);
-  transition: background-color 120ms ease, transform 60ms ease;
-}
-
-.preset-btn:hover:not(.is-active) {
-  background: #EEE0C0;
-  transform: none;
-  box-shadow: none;
-}
-
-/* Preset-specific accent colours when active */
-.preset-btn.is-active[data-preset="spend-greedily"] {
-  background: var(--color-green);
-  color: #fff;
-  border-color: #527A49;
-}
-.preset-btn.is-active[data-preset="5star-only"] {
-  background: var(--color-gold);
-  color: var(--color-brown);
-  border-color: #C4A030;
-}
-.preset-btn.is-active[data-preset="hoard-then-spend"] {
-  background: var(--color-sky);
-  color: #fff;
-  border-color: #3A7AB0;
-}
-.preset-btn.is-active[data-preset="end-season-blitz"] {
-  background: var(--color-orange);
-  color: #fff;
-  border-color: #B86018;
-}
-.preset-btn.is-active[data-preset="never-spend"] {
-  background: #9E9E9E;
-  color: #fff;
-  border-color: #6E6E6E;
-}
-
-/* Vault tiers fieldset */
-#vault-tiers-fieldset {
-  border: 1px solid rgba(107, 68, 35, 0.2);
-  border-radius: 6px;
-  padding: 6px 8px;
+/* Preset card list */
+#preset-cards {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 6px;
 }
 
-#vault-tiers-fieldset legend {
-  font-size: 0.7rem;
-  color: var(--color-brown);
-  padding: 0 4px;
-  opacity: 0.7;
-}
-
-/* Priority order list */
-#priority-section {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-#priority-label {
-  font-size: 0.72rem;
-  color: var(--color-brown);
-  opacity: 0.8;
-}
-
-#priority-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0;
-}
-
-.priority-item {
+.preset-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: rgba(255,255,255,0.5);
-  border: 1px solid rgba(107,68,35,0.2);
-  border-radius: 5px;
-  padding: 3px 8px;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1.5px solid rgba(107, 68, 35, 0.22);
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease, box-shadow 100ms ease, transform 80ms ease;
+  position: relative;
 }
 
-.priority-tier-label {
-  font-family: 'Fredoka One', serif;
-  font-size: 0.82rem;
-  color: var(--color-brown);
+.preset-card:hover:not([aria-pressed="true"]) {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(107, 68, 35, 0.4);
+  box-shadow: 0 1px 4px rgba(107, 68, 35, 0.12);
 }
 
-.priority-btn-group {
-  display: flex;
-  gap: 3px;
+.preset-card:active {
+  transform: scale(0.985);
 }
 
-.priority-btn {
-  padding: 2px 6px;
-  font-size: 0.65rem;
-  border-radius: 4px;
-  border-width: 1.5px;
-  min-width: 24px;
+.preset-card__icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 28px;
   text-align: center;
+}
+
+.preset-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preset-card__name {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.85rem;
+  color: var(--color-brown);
+  line-height: 1.2;
+}
+
+.preset-card__desc {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.67rem;
+  color: #7A5535;
+  line-height: 1.35;
+  opacity: 0.85;
+}
+
+/* Checkmark shown only when selected */
+.preset-card__check {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  color: transparent;
+  font-weight: 700;
+  transition: color 100ms ease;
+}
+
+/* ── Selected state: per-preset accent colours ── */
+
+.preset-card[aria-pressed="true"] .preset-card__check {
+  color: currentColor;
+}
+
+.preset-card[aria-pressed="true"][data-preset="spend-greedily"] {
+  background: linear-gradient(135deg, #5A9E4E 0%, #6BB55E 100%);
+  border-color: #3E7834;
+  box-shadow: 0 2px 8px rgba(74, 128, 60, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+  color: #fff;
+}
+.preset-card[aria-pressed="true"][data-preset="spend-greedily"] .preset-card__name {
+  color: #fff;
+}
+.preset-card[aria-pressed="true"][data-preset="spend-greedily"] .preset-card__desc {
+  color: rgba(255,255,255,0.82);
+  opacity: 1;
+}
+.preset-card[aria-pressed="true"][data-preset="spend-greedily"] .preset-card__check {
+  color: rgba(255,255,255,0.9);
+}
+
+.preset-card[aria-pressed="true"][data-preset="5star-only"] {
+  background: linear-gradient(135deg, #D4A820 0%, #E8C040 100%);
+  border-color: #A07818;
+  box-shadow: 0 2px 8px rgba(180, 140, 20, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  color: #5A3A00;
+}
+.preset-card[aria-pressed="true"][data-preset="5star-only"] .preset-card__name {
+  color: #4A3000;
+}
+.preset-card[aria-pressed="true"][data-preset="5star-only"] .preset-card__desc {
+  color: rgba(80, 50, 0, 0.8);
+  opacity: 1;
+}
+.preset-card[aria-pressed="true"][data-preset="5star-only"] .preset-card__check {
+  color: rgba(80, 50, 0, 0.8);
+}
+
+.preset-card[aria-pressed="true"][data-preset="hoard-then-spend"] {
+  background: linear-gradient(135deg, #3A82C4 0%, #5098D8 100%);
+  border-color: #265E96;
+  box-shadow: 0 2px 8px rgba(50, 100, 180, 0.38), inset 0 1px 0 rgba(255,255,255,0.25);
+  color: #fff;
+}
+.preset-card[aria-pressed="true"][data-preset="hoard-then-spend"] .preset-card__name {
+  color: #fff;
+}
+.preset-card[aria-pressed="true"][data-preset="hoard-then-spend"] .preset-card__desc {
+  color: rgba(255,255,255,0.82);
+  opacity: 1;
+}
+.preset-card[aria-pressed="true"][data-preset="hoard-then-spend"] .preset-card__check {
+  color: rgba(255,255,255,0.9);
+}
+
+.preset-card[aria-pressed="true"][data-preset="end-season-blitz"] {
+  background: linear-gradient(135deg, #D46820 0%, #E8823A 100%);
+  border-color: #A04C10;
+  box-shadow: 0 2px 8px rgba(200, 100, 20, 0.4), inset 0 1px 0 rgba(255,255,255,0.25);
+  color: #fff;
+}
+.preset-card[aria-pressed="true"][data-preset="end-season-blitz"] .preset-card__name {
+  color: #fff;
+}
+.preset-card[aria-pressed="true"][data-preset="end-season-blitz"] .preset-card__desc {
+  color: rgba(255,255,255,0.82);
+  opacity: 1;
+}
+.preset-card[aria-pressed="true"][data-preset="end-season-blitz"] .preset-card__check {
+  color: rgba(255,255,255,0.9);
+}
+
+.preset-card[aria-pressed="true"][data-preset="never-spend"] {
+  background: linear-gradient(135deg, #7A7A7A 0%, #949494 100%);
+  border-color: #565656;
+  box-shadow: 0 2px 8px rgba(100, 100, 100, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+  color: #fff;
+}
+.preset-card[aria-pressed="true"][data-preset="never-spend"] .preset-card__name {
+  color: #fff;
+}
+.preset-card[aria-pressed="true"][data-preset="never-spend"] .preset-card__desc {
+  color: rgba(255,255,255,0.78);
+  opacity: 1;
+}
+.preset-card[aria-pressed="true"][data-preset="never-spend"] .preset-card__check {
+  color: rgba(255,255,255,0.9);
 }
 
 

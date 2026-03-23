@@ -106,7 +106,7 @@ const elProgressBar       = $('album-progress-bar');
 const elProgressTrack     = $('album-progress-track');
 const elProgressLabel     = $('album-progress-label');
 const elEventLog          = $('event-log');
-const elPresetNameDisplay = $('preset-name-display');
+// Hidden vault fields (kept for engine compat; driven by preset cards)
 const elVaultTier3        = $('vault-tier-3');
 const elVaultTier4        = $('vault-tier-4');
 const elVaultTier5        = $('vault-tier-5');
@@ -115,8 +115,6 @@ const elVaultEndDay       = $('vault-end-day');
 const elVaultReserve      = $('vault-reserve');
 const elVaultUnlimited    = $('vault-unlimited');
 const elVaultMaxPerDay    = $('vault-max-per-day');
-const elMaxPerDayRow      = $('max-per-day-row');
-const elPriorityList      = $('priority-list');
 const elChallengeSelect   = $('challenge-select');
 const elSeedInput         = $('seed-input');
 
@@ -163,73 +161,52 @@ function setSpeed(speed) {
 // ── VAULT CONFIG — read / write ────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Read the current vault config from the DOM form fields. */
+/** Currently active preset name (matches a key in PRESETS). */
+let activePresetName = 'Spend Greedily';
+
+/**
+ * Read the vault config for the currently selected preset card.
+ * This is the single source of truth — all engine calls use this.
+ */
 function readVaultConfig() {
-  const tiers = {
-    t3: elVaultTier3.checked,
-    t4: elVaultTier4.checked,
-    t5: elVaultTier5.checked,
-  };
-
-  // Priority: only enabled tiers, in the DOM order of visible priority items.
-  const priority = [];
-  elPriorityList.querySelectorAll('.priority-item').forEach(item => {
-    if (item.hidden) return;
-    priority.push(parseInt(item.dataset.tier, 10));
-  });
-
-  const maxPerDay = elVaultUnlimited.checked
-    ? Infinity
-    : Math.max(1, parseInt(elVaultMaxPerDay.value, 10) || 1);
-
-  return {
-    tiers,
-    priority,
-    startDay:  clampInt(elVaultStartDay.value,  1, 50, 1),
-    endDay:    clampInt(elVaultEndDay.value,     1, 50, 50),
-    reserve:   Math.max(0, parseInt(elVaultReserve.value, 10) || 0),
-    maxPerDay,
-  };
+  return { ...PRESETS[activePresetName] };
 }
 
-/** Write a VaultConfig object back to the DOM form fields atomically. */
+/**
+ * Activate a named preset: update internal state, sync hidden fields,
+ * and refresh the card UI.
+ */
 function applyVaultConfig(vc) {
-  elVaultTier3.checked  = vc.tiers.t3;
-  elVaultTier4.checked  = vc.tiers.t4;
-  elVaultTier5.checked  = vc.tiers.t5;
-  elVaultStartDay.value = String(vc.startDay);
-  elVaultEndDay.value   = String(vc.endDay);
-  elVaultReserve.value  = String(vc.reserve);
-
-  if (vc.maxPerDay === Infinity) {
-    elVaultUnlimited.checked = true;
-    elMaxPerDayRow.hidden    = true;
-  } else {
-    elVaultUnlimited.checked   = false;
-    elMaxPerDayRow.hidden      = false;
-    elVaultMaxPerDay.value     = String(vc.maxPerDay);
+  // Find which preset this config matches (or fall back to first)
+  let matched = 'Spend Greedily';
+  for (const [name, preset] of Object.entries(PRESETS)) {
+    if (
+      vc.tiers.t3  === preset.tiers.t3  &&
+      vc.tiers.t4  === preset.tiers.t4  &&
+      vc.tiers.t5  === preset.tiers.t5  &&
+      vc.startDay  === preset.startDay  &&
+      vc.endDay    === preset.endDay    &&
+      vc.reserve   === preset.reserve   &&
+      vc.maxPerDay === preset.maxPerDay &&
+      vc.priority.length === preset.priority.length &&
+      vc.priority.every((v, i) => v === preset.priority[i])
+    ) { matched = name; break; }
   }
+  activePresetName = matched;
+  _syncHiddenVaultFields(PRESETS[activePresetName]);
+  updatePresetLabel();
+}
 
-  // Rebuild priority list: reorder DOM items to match vc.priority,
-  // show enabled tiers, hide disabled ones.
-  const allItems   = Array.from(elPriorityList.querySelectorAll('.priority-item'));
-  const enabledSet = new Set(vc.priority);
-
-  // First pass: mark visibility
-  allItems.forEach(item => {
-    const tier = parseInt(item.dataset.tier, 10);
-    item.hidden = !enabledSet.has(tier);
-  });
-
-  // Second pass: re-order — append enabled tiers in vc.priority order
-  vc.priority.forEach(tier => {
-    const item = allItems.find(el => parseInt(el.dataset.tier, 10) === tier);
-    if (item) elPriorityList.appendChild(item);
-  });
-  // Append hidden items last so they don't affect visual order
-  allItems.forEach(item => {
-    if (item.hidden) elPriorityList.appendChild(item);
-  });
+/** Sync the hidden input fields so any existing engine.js reads still work. */
+function _syncHiddenVaultFields(vc) {
+  elVaultTier3.checked    = vc.tiers.t3;
+  elVaultTier4.checked    = vc.tiers.t4;
+  elVaultTier5.checked    = vc.tiers.t5;
+  elVaultStartDay.value   = String(vc.startDay);
+  elVaultEndDay.value     = String(vc.endDay);
+  elVaultReserve.value    = String(vc.reserve);
+  elVaultUnlimited.checked = (vc.maxPerDay === Infinity);
+  elVaultMaxPerDay.value  = vc.maxPerDay === Infinity ? '1' : String(vc.maxPerDay);
 }
 
 /** Read the challenge select value and map it to the engine's key. */
@@ -247,72 +224,16 @@ function readSeed() {
 // ── PRESET LABEL ───────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Compare a VaultConfig against all five PRESETS; return name or 'Custom'. */
-function resolvePresetLabel(vc) {
-  for (const [name, preset] of Object.entries(PRESETS)) {
-    if (
-      vc.tiers.t3  === preset.tiers.t3  &&
-      vc.tiers.t4  === preset.tiers.t4  &&
-      vc.tiers.t5  === preset.tiers.t5  &&
-      vc.startDay  === preset.startDay  &&
-      vc.endDay    === preset.endDay    &&
-      vc.reserve   === preset.reserve   &&
-      vc.maxPerDay === preset.maxPerDay &&
-      vc.priority.length === preset.priority.length &&
-      vc.priority.every((v, i) => v === preset.priority[i])
-    ) {
-      return name;
-    }
-  }
-  return 'Custom';
-}
-
-/** Refresh the preset name display and active-button highlight. */
+/** Refresh the preset card selected states to match activePresetName. */
 function updatePresetLabel() {
-  const vc    = readVaultConfig();
-  const label = resolvePresetLabel(vc);
-
-  elPresetNameDisplay.textContent = label;
-
-  $$('.preset-btn').forEach(btn => {
-    const name   = PRESET_DATA_MAP[btn.dataset.preset];
-    const active = (name === label);
-    btn.classList.toggle('preset-btn--active', active);
-    btn.setAttribute('aria-pressed', String(active));
+  $$('.preset-card').forEach(card => {
+    const presetName = PRESET_DATA_MAP[card.dataset.preset];
+    const active     = (presetName === activePresetName);
+    card.setAttribute('aria-pressed', String(active));
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ── PRIORITY LIST MANAGEMENT ───────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════
 
-/** Show/hide priority items based on which tier checkboxes are checked. */
-function syncPriorityListVisibility() {
-  const enabled = {
-    3: elVaultTier3.checked,
-    4: elVaultTier4.checked,
-    5: elVaultTier5.checked,
-  };
-  elPriorityList.querySelectorAll('.priority-item').forEach(item => {
-    const tier = parseInt(item.dataset.tier, 10);
-    item.hidden = !enabled[tier];
-  });
-}
-
-/** Move a priority item up or down, skipping over hidden (disabled) siblings. */
-function movePriorityItem(tier, direction) {
-  const allItems     = Array.from(elPriorityList.querySelectorAll('.priority-item'));
-  const visibleItems = allItems.filter(el => !el.hidden);
-  const idx          = visibleItems.findIndex(el => parseInt(el.dataset.tier, 10) === tier);
-  if (idx < 0) return;
-
-  if (direction === 'up' && idx > 0) {
-    elPriorityList.insertBefore(visibleItems[idx], visibleItems[idx - 1]);
-  } else if (direction === 'down' && idx < visibleItems.length - 1) {
-    // Insert the NEXT item before the current one — equivalent to moving current down
-    elPriorityList.insertBefore(visibleItems[idx + 1], visibleItems[idx]);
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ── STAR COUNTER — digit-slot animation ────────────────────────────────────
@@ -925,42 +846,13 @@ elChallengeSelect.addEventListener('change', () => {
   updatePresetLabel();
 });
 
-// ── Vault tier checkboxes ──────────────────────────────────────────────────
-[elVaultTier3, elVaultTier4, elVaultTier5].forEach(cb => {
-  cb.addEventListener('change', () => {
-    syncPriorityListVisibility();
-    updatePresetLabel();
-  });
-});
-
-// ── Vault numeric fields ───────────────────────────────────────────────────
-[elVaultStartDay, elVaultEndDay, elVaultReserve, elVaultMaxPerDay].forEach(input => {
-  input.addEventListener('change', updatePresetLabel);
-});
-
-// ── Unlimited-per-day checkbox ─────────────────────────────────────────────
-elVaultUnlimited.addEventListener('change', () => {
-  elMaxPerDayRow.hidden = elVaultUnlimited.checked;
-  updatePresetLabel();
-});
-
-// ── Priority list — ▲/▼ buttons (event delegation) ────────────────────────
-elPriorityList.addEventListener('click', e => {
-  const btn = e.target.closest('.priority-btn');
-  if (!btn) return;
-  const direction = btn.dataset.direction;   // 'up' | 'down'
-  const tier      = parseInt(btn.dataset.tier, 10);
-  movePriorityItem(tier, direction);
-  updatePresetLabel();
-});
-
-// ── Preset buttons ─────────────────────────────────────────────────────────
-$$('.preset-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const presetName = PRESET_DATA_MAP[btn.dataset.preset];
-    const preset     = PRESETS[presetName];
-    if (!preset) return;
-    applyVaultConfig(preset);   // atomically sets all editable fields
+// ── Preset cards ──────────────────────────────────────────────────────────
+$$('.preset-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const presetName = PRESET_DATA_MAP[card.dataset.preset];
+    if (!presetName || !PRESETS[presetName]) return;
+    activePresetName = presetName;
+    _syncHiddenVaultFields(PRESETS[presetName]);
     updatePresetLabel();
   });
 });
@@ -1004,7 +896,8 @@ function init() {
   baseSeed          = seed;
 
   // 2. Apply default vault strategy — "Spend Greedily" gives a compelling default
-  applyVaultConfig(PRESETS['Spend Greedily']);
+  activePresetName = 'Spend Greedily';
+  _syncHiddenVaultFields(PRESETS['Spend Greedily']);
   updatePresetLabel();
 
   // 3. Set speed to 1× (updates CSS variables and button states)
