@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farm Merge Valley — Sticker Season Simulator</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!--
+    ═══════════════════════════════════════════════════════════════
+    GRAIN TEXTURE FILTER — invisible SVG, referenced by CSS
+    ═══════════════════════════════════════════════════════════════
+  -->
+  <svg id="grain-filter" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="grain" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.65"
+          numOctaves="3"
+          stitchTiles="stitch"
+          result="noise"/>
+        <feColorMatrix
+          type="saturate"
+          values="0"
+          in="noise"
+          result="grey"/>
+        <feBlend
+          in="SourceGraphic"
+          in2="grey"
+          mode="overlay"
+          result="blended"/>
+        <feComposite
+          in="blended"
+          in2="SourceGraphic"
+          operator="in"/>
+      </filter>
+    </defs>
+  </svg>
+
+
+  <!--
+    ═══════════════════════════════════════════════════════════════
+    TOP SECTION — exactly 100svh, two side-by-side panels, no scroll
+    Left panel  ≈ 38%  (controls)
+    Right panel ≈ 62%  (sticker album)
+    ═══════════════════════════════════════════════════════════════
+  -->
+  <div id="top-section">
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- LEFT PANEL — Simulation Controls                        -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <aside id="control-panel" class="panel">
+
+      <!-- ── Brand heading ──────────────────────────────────── -->
+      <header id="panel-header">
+        <h1 id="app-title">Farm Merge Valley</h1>
+        <p id="app-subtitle">Sticker Season Simulator</p>
+      </header>
+
+      <!-- ── Simulation counters ────────────────────────────── -->
+      <div id="sim-counters">
+
+        <div id="day-counter" aria-live="polite" aria-atomic="true" aria-label="Current day">
+          <span id="day-current" class="counter-value">0</span>
+          <span class="counter-sep"> / </span>
+          <span id="day-total" class="counter-max">50</span>
+          <span class="counter-unit"> days</span>
+        </div>
+
+        <div id="star-counter" aria-live="polite" aria-atomic="true" aria-label="Star balance">
+          <span class="star-currency-icon" aria-hidden="true">★</span>
+          <span id="star-digit-display" class="counter-value">0</span>
+          <span class="counter-unit"> stars</span>
+        </div>
+
+      </div>
+
+      <!-- ── Main control buttons ───────────────────────────── -->
+      <div id="btn-group-main" class="btn-row" role="group" aria-label="Simulation playback controls">
+        <button id="btn-run"   type="button">▶ Run</button>
+        <button id="btn-pause" type="button">⏸ Pause</button>
+        <button id="btn-reset" type="button">↺ Reset</button>
+      </div>
+
+      <!-- ── Auto-play row ──────────────────────────────────── -->
+      <div id="btn-group-auto" class="btn-row">
+        <button id="btn-auto" type="button" aria-pressed="false">⟳ Auto</button>
+        <span   id="auto-pill" class="badge-pill" aria-hidden="true" hidden>AUTO</span>
+      </div>
+
+      <!-- ── Speed selector — segmented pill ───────────────── -->
+      <div id="speed-selector" class="control-group" role="group" aria-label="Simulation speed">
+        <button type="button" class="speed-btn" data-speed="1"   aria-pressed="true">1×</button>
+        <button type="button" class="speed-btn" data-speed="2"   aria-pressed="false">2×</button>
+        <button type="button" class="speed-btn" data-speed="5"   aria-pressed="false">5×</button>
+        <button type="button" class="speed-btn" data-speed="10"  aria-pressed="false">10×</button>
+        <button type="button" class="speed-btn" data-speed="max" aria-pressed="false">MAX</button>
+      </div>
+
+      <!-- ── Seed & simulation parameters ──────────────────── -->
+      <div id="sim-params" class="control-group">
+
+        <div class="field-row">
+          <label for="seed-input">Seed</label>
+          <input
+            type="number"
+            id="seed-input"
+            name="seed"
+            min="0"
+            max="4294967295"
+            placeholder="e.g. 42"
+            autocomplete="off">
+        </div>
+
+        <div class="field-row">
+          <label for="days-input">Days to simulate</label>
+          <input
+            type="number"
+            id="days-input"
+            name="days"
+            min="1"
+            max="50"
+            value="50">
+        </div>
+
+        <div class="field-row field-row--inline">
+          <label for="login-cycle-toggle">5-day login cycle</label>
+          <input
+            type="checkbox"
+            id="login-cycle-toggle"
+            name="login-cycle"
+            checked>
+        </div>
+
+      </div>
+
+      <!-- ── Challenge setting ──────────────────────────────── -->
+      <div id="challenge-group" class="control-group">
+        <h2 class="control-group-label">Daily Challenges</h2>
+        <div class="field-row field-row--stack">
+          <label for="challenge-select">Tasks completed per day</label>
+          <select id="challenge-select" name="challenge">
+            <option value="all10" selected>All 10 tasks — 1×1★, 4×2★, 2×3★, 3×4★</option>
+            <option value="tasks1to7">Tasks 1–7 — 1×1★, 4×2★, 2×3★</option>
+            <option value="tasks1to5">Tasks 1–5 — 1×1★, 4×2★</option>
+            <option value="none">None</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ── Vault strategy ─────────────────────────────────── -->
+      <div id="vault-group" class="control-group">
+        <h2 class="control-group-label">
+          Vault Strategy
+          <span id="active-preset-label" aria-live="polite">
+            — <strong id="preset-name-display">Custom</strong>
+          </span>
+        </h2>
+
+        <!-- Preset buttons -->
+        <div id="preset-buttons" class="preset-btn-row" role="group" aria-label="Vault strategy presets">
+          <button type="button" class="preset-btn" data-preset="spend-greedily">Spend Greedily</button>
+          <button type="button" class="preset-btn" data-preset="5star-only">5★ Only</button>
+          <button type="button" class="preset-btn" data-preset="hoard-then-spend">Hoard Then Spend</button>
+          <button type="button" class="preset-btn" data-preset="end-season-blitz">End-Season Blitz</button>
+          <button type="button" class="preset-btn" data-preset="never-spend">Never Spend</button>
+        </div>
+
+        <!-- Enabled vault tiers -->
+        <fieldset id="vault-tiers-fieldset">
+          <legend>Enabled vault tiers</legend>
+          <label class="checkbox-label">
+            <input type="checkbox" id="vault-tier-3" name="vault-tier-3" value="3">
+            3★ pack (250★)
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="vault-tier-4" name="vault-tier-4" value="4">
+            4★ pack (500★)
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="vault-tier-5" name="vault-tier-5" value="5">
+            5★ pack (800★)
+          </label>
+        </fieldset>
+
+        <!-- Purchase priority order -->
+        <div id="priority-section">
+          <p id="priority-label" class="field-label">Purchase priority order</p>
+          <ol
+            id="priority-list"
+            aria-labelledby="priority-label"
+            aria-describedby="priority-hint">
+            <li class="priority-item" data-tier="5">
+              <span class="priority-tier-label">5★</span>
+              <div class="priority-btn-group">
+                <button
+                  type="button"
+                  class="priority-btn priority-up"
+                  data-direction="up"
+                  data-tier="5"
+                  aria-label="Move 5★ tier up in priority">▲</button>
+                <button
+                  type="button"
+                  class="priority-btn priority-down"
+                  data-direction="down"
+                  data-tier="5"
+                  aria-label="Move 5★ tier down in priority">▼</button>
+              </div>
+            </li>
+            <li class="priority-item" data-tier="4">
+              <span class="priority-tier-label">4★</span>
+              <div class="priority-btn-group">
+                <button
+                  type="button"
+                  class="priority-btn priority-up"
+                  data-direction="up"
+                  data-tier="4"
+                  aria-label="Move 4★ tier up in priority">▲</button>
+                <button
+                  type="button"
+                  class="priority-btn priority-down"
+                  data-direction="down"
+                  data-tier="4"
+                  aria-label="Move 4★ tier down in priority">▼</button>
+              </div>
+            </li>
+            <li class="priority-item" data-tier="3">
+              <span class="priority-tier-label">3★</span>
+              <div class="priority-btn-group">
+                <button
+                  type="button"
+                  class="priority-btn priority-up"
+                  data-direction="up"
+                  data-tier="3"
+                  aria-label="Move 3★ tier up in priority">▲</button>
+                <button
+                  type="button"
+                  class="priority-btn priority-down"
+                  data-direction="down"
+                  data-tier="3"
+                  aria-label="Move 3★ tier down in priority">▼</button>
+              </div>
+            </li>
+          </ol>
+          <p id="priority-hint" class="field-hint">
+            Top = purchased first. Disabled tiers are removed automatically.
+          </p>
+        </div>
+
+        <!-- Spending window -->
+        <div class="field-row">
+          <label for="vault-start-day">Start spending on day</label>
+          <input
+            type="number"
+            id="vault-start-day"
+            name="vault-start-day"
+            min="1"
+            max="50"
+            value="1">
+        </div>
+        <div class="field-row">
+          <label for="vault-end-day">Stop spending after day</label>
+          <input
+            type="number"
+            id="vault-end-day"
+            name="vault-end-day"
+            min="1"
+            max="50"
+            value="50">
+        </div>
+
+        <!-- Star reserve -->
+        <div class="field-row">
+          <label for="vault-reserve">Minimum star reserve</label>
+          <input
+            type="number"
+            id="vault-reserve"
+            name="vault-reserve"
+            min="0"
+            value="0">
+        </div>
+
+        <!-- Max purchases per day -->
+        <div id="max-per-day-section">
+          <div class="field-row field-row--inline">
+            <label for="vault-unlimited">Unlimited purchases/day</label>
+            <input
+              type="checkbox"
+              id="vault-unlimited"
+              name="vault-unlimited"
+              checked>
+          </div>
+          <div class="field-row" id="max-per-day-row" hidden>
+            <label for="vault-max-per-day">Max purchases/day</label>
+            <input
+              type="number"
+              id="vault-max-per-day"
+              name="vault-max-per-day"
+              min="1"
+              value="1">
+          </div>
+        </div>
+
+      </div><!-- end #vault-group -->
+
+      <!-- ── Live event log ─────────────────────────────────── -->
+      <div id="event-log-section" class="control-group">
+        <h2 class="control-group-label">Event Log</h2>
+        <ol
+          id="event-log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label="Live simulation event log (most recent 8 events)">
+          <!-- Entries injected by ui.js, newest at bottom, max 8 visible -->
+        </ol>
+      </div>
+
+    </aside><!-- end #control-panel -->
+
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- RIGHT PANEL — Sticker Album                             -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <main id="album-panel" class="panel">
+
+      <header id="album-header">
+        <h2 id="album-title">Sticker Album</h2>
+
+        <!-- Overall progress bar -->
+        <div
+          id="album-progress-track"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="108"
+          aria-valuenow="0"
+          aria-label="Total stickers collected">
+          <div id="album-progress-bar"></div>
+        </div>
+        <p id="album-progress-label">0 / 108 stickers collected (0%)</p>
+      </header>
+
+      <div id="album-scroll-area">
+
+        <!-- ── 1★ Common — 27 cards (IDs 1–27) ──────────────── -->
+        <section class="rarity-section" data-rarity="1">
+          <header class="rarity-header" data-rarity="1">
+            <span class="rarity-title">1★ Common</span>
+            <span class="rarity-progress" id="rarity-progress-1">0 / 27</span>
+          </header>
+          <div class="card-grid" data-rarity="1" role="list" aria-label="1★ Common stickers">
+            <div class="sticker-card" data-sticker-id="1"   data-rarity="1" role="listitem" aria-label="Sticker 1, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="2"   data-rarity="1" role="listitem" aria-label="Sticker 2, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="3"   data-rarity="1" role="listitem" aria-label="Sticker 3, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="4"   data-rarity="1" role="listitem" aria-label="Sticker 4, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="5"   data-rarity="1" role="listitem" aria-label="Sticker 5, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="6"   data-rarity="1" role="listitem" aria-label="Sticker 6, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="7"   data-rarity="1" role="listitem" aria-label="Sticker 7, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="8"   data-rarity="1" role="listitem" aria-label="Sticker 8, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="9"   data-rarity="1" role="listitem" aria-label="Sticker 9, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="10"  data-rarity="1" role="listitem" aria-label="Sticker 10, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="11"  data-rarity="1" role="listitem" aria-label="Sticker 11, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="12"  data-rarity="1" role="listitem" aria-label="Sticker 12, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="13"  data-rarity="1" role="listitem" aria-label="Sticker 13, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="14"  data-rarity="1" role="listitem" aria-label="Sticker 14, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="15"  data-rarity="1" role="listitem" aria-label="Sticker 15, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="16"  data-rarity="1" role="listitem" aria-label="Sticker 16, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="17"  data-rarity="1" role="listitem" aria-label="Sticker 17, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="18"  data-rarity="1" role="listitem" aria-label="Sticker 18, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="19"  data-rarity="1" role="listitem" aria-label="Sticker 19, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="20"  data-rarity="1" role="listitem" aria-label="Sticker 20, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="21"  data-rarity="1" role="listitem" aria-label="Sticker 21, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="22"  data-rarity="1" role="listitem" aria-label="Sticker 22, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="23"  data-rarity="1" role="listitem" aria-label="Sticker 23, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="24"  data-rarity="1" role="listitem" aria-label="Sticker 24, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="25"  data-rarity="1" role="listitem" aria-label="Sticker 25, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="26"  data-rarity="1" role="listitem" aria-label="Sticker 26, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="27"  data-rarity="1" role="listitem" aria-label="Sticker 27, 1★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+          </div>
+        </section>
+
+        <!-- ── 2★ Uncommon — 21 cards (IDs 28–48) ───────────── -->
+        <section class="rarity-section" data-rarity="2">
+          <header class="rarity-header" data-rarity="2">
+            <span class="rarity-title">2★ Uncommon</span>
+            <span class="rarity-progress" id="rarity-progress-2">0 / 21</span>
+          </header>
+          <div class="card-grid" data-rarity="2" role="list" aria-label="2★ Uncommon stickers">
+            <div class="sticker-card" data-sticker-id="28" data-rarity="2" role="listitem" aria-label="Sticker 28, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="29" data-rarity="2" role="listitem" aria-label="Sticker 29, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="30" data-rarity="2" role="listitem" aria-label="Sticker 30, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="31" data-rarity="2" role="listitem" aria-label="Sticker 31, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="32" data-rarity="2" role="listitem" aria-label="Sticker 32, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="33" data-rarity="2" role="listitem" aria-label="Sticker 33, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="34" data-rarity="2" role="listitem" aria-label="Sticker 34, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="35" data-rarity="2" role="listitem" aria-label="Sticker 35, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="36" data-rarity="2" role="listitem" aria-label="Sticker 36, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="37" data-rarity="2" role="listitem" aria-label="Sticker 37, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="38" data-rarity="2" role="listitem" aria-label="Sticker 38, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="39" data-rarity="2" role="listitem" aria-label="Sticker 39, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="40" data-rarity="2" role="listitem" aria-label="Sticker 40, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="41" data-rarity="2" role="listitem" aria-label="Sticker 41, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="42" data-rarity="2" role="listitem" aria-label="Sticker 42, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="43" data-rarity="2" role="listitem" aria-label="Sticker 43, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="44" data-rarity="2" role="listitem" aria-label="Sticker 44, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="45" data-rarity="2" role="listitem" aria-label="Sticker 45, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="46" data-rarity="2" role="listitem" aria-label="Sticker 46, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="47" data-rarity="2" role="listitem" aria-label="Sticker 47, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="48" data-rarity="2" role="listitem" aria-label="Sticker 48, 2★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+          </div>
+        </section>
+
+        <!-- ── 3★ Rare — 18 cards (IDs 49–66) ──────────────── -->
+        <section class="rarity-section" data-rarity="3">
+          <header class="rarity-header" data-rarity="3">
+            <span class="rarity-title">3★ Rare</span>
+            <span class="rarity-progress" id="rarity-progress-3">0 / 18</span>
+          </header>
+          <div class="card-grid" data-rarity="3" role="list" aria-label="3★ Rare stickers">
+            <div class="sticker-card" data-sticker-id="49" data-rarity="3" role="listitem" aria-label="Sticker 49, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="50" data-rarity="3" role="listitem" aria-label="Sticker 50, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="51" data-rarity="3" role="listitem" aria-label="Sticker 51, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="52" data-rarity="3" role="listitem" aria-label="Sticker 52, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="53" data-rarity="3" role="listitem" aria-label="Sticker 53, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="54" data-rarity="3" role="listitem" aria-label="Sticker 54, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="55" data-rarity="3" role="listitem" aria-label="Sticker 55, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="56" data-rarity="3" role="listitem" aria-label="Sticker 56, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="57" data-rarity="3" role="listitem" aria-label="Sticker 57, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="58" data-rarity="3" role="listitem" aria-label="Sticker 58, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="59" data-rarity="3" role="listitem" aria-label="Sticker 59, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="60" data-rarity="3" role="listitem" aria-label="Sticker 60, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="61" data-rarity="3" role="listitem" aria-label="Sticker 61, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="62" data-rarity="3" role="listitem" aria-label="Sticker 62, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="63" data-rarity="3" role="listitem" aria-label="Sticker 63, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="64" data-rarity="3" role="listitem" aria-label="Sticker 64, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="65" data-rarity="3" role="listitem" aria-label="Sticker 65, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="66" data-rarity="3" role="listitem" aria-label="Sticker 66, 3★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+          </div>
+        </section>
+
+        <!-- ── 4★ Epic — 18 cards (IDs 67–84) ──────────────── -->
+        <section class="rarity-section" data-rarity="4">
+          <header class="rarity-header" data-rarity="4">
+            <span class="rarity-title">4★ Epic</span>
+            <span class="rarity-progress" id="rarity-progress-4">0 / 18</span>
+          </header>
+          <div class="card-grid" data-rarity="4" role="list" aria-label="4★ Epic stickers">
+            <div class="sticker-card" data-sticker-id="67" data-rarity="4" role="listitem" aria-label="Sticker 67, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="68" data-rarity="4" role="listitem" aria-label="Sticker 68, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="69" data-rarity="4" role="listitem" aria-label="Sticker 69, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="70" data-rarity="4" role="listitem" aria-label="Sticker 70, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="71" data-rarity="4" role="listitem" aria-label="Sticker 71, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="72" data-rarity="4" role="listitem" aria-label="Sticker 72, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="73" data-rarity="4" role="listitem" aria-label="Sticker 73, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="74" data-rarity="4" role="listitem" aria-label="Sticker 74, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="75" data-rarity="4" role="listitem" aria-label="Sticker 75, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="76" data-rarity="4" role="listitem" aria-label="Sticker 76, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="77" data-rarity="4" role="listitem" aria-label="Sticker 77, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="78" data-rarity="4" role="listitem" aria-label="Sticker 78, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="79" data-rarity="4" role="listitem" aria-label="Sticker 79, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="80" data-rarity="4" role="listitem" aria-label="Sticker 80, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="81" data-rarity="4" role="listitem" aria-label="Sticker 81, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="82" data-rarity="4" role="listitem" aria-label="Sticker 82, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="83" data-rarity="4" role="listitem" aria-label="Sticker 83, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="84" data-rarity="4" role="listitem" aria-label="Sticker 84, 4★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+          </div>
+        </section>
+
+        <!-- ── 5★ Legendary — 24 cards (IDs 85–108) ─────────── -->
+        <section class="rarity-section" data-rarity="5">
+          <header class="rarity-header" data-rarity="5">
+            <span class="rarity-title">5★ Legendary</span>
+            <span class="rarity-progress" id="rarity-progress-5">0 / 24</span>
+          </header>
+          <div class="card-grid" data-rarity="5" role="list" aria-label="5★ Legendary stickers">
+            <div class="sticker-card" data-sticker-id="85"  data-rarity="5" role="listitem" aria-label="Sticker 85, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="86"  data-rarity="5" role="listitem" aria-label="Sticker 86, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="87"  data-rarity="5" role="listitem" aria-label="Sticker 87, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="88"  data-rarity="5" role="listitem" aria-label="Sticker 88, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="89"  data-rarity="5" role="listitem" aria-label="Sticker 89, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="90"  data-rarity="5" role="listitem" aria-label="Sticker 90, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="91"  data-rarity="5" role="listitem" aria-label="Sticker 91, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="92"  data-rarity="5" role="listitem" aria-label="Sticker 92, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="93"  data-rarity="5" role="listitem" aria-label="Sticker 93, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="94"  data-rarity="5" role="listitem" aria-label="Sticker 94, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="95"  data-rarity="5" role="listitem" aria-label="Sticker 95, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="96"  data-rarity="5" role="listitem" aria-label="Sticker 96, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="97"  data-rarity="5" role="listitem" aria-label="Sticker 97, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="98"  data-rarity="5" role="listitem" aria-label="Sticker 98, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="99"  data-rarity="5" role="listitem" aria-label="Sticker 99, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="100" data-rarity="5" role="listitem" aria-label="Sticker 100, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="101" data-rarity="5" role="listitem" aria-label="Sticker 101, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="102" data-rarity="5" role="listitem" aria-label="Sticker 102, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="103" data-rarity="5" role="listitem" aria-label="Sticker 103, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="104" data-rarity="5" role="listitem" aria-label="Sticker 104, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="105" data-rarity="5" role="listitem" aria-label="Sticker 105, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="106" data-rarity="5" role="listitem" aria-label="Sticker 106, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="107" data-rarity="5" role="listitem" aria-label="Sticker 107, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+            <div class="sticker-card" data-sticker-id="108" data-rarity="5" role="listitem" aria-label="Sticker 108, 5★"><span class="card-label">?</span><span class="card-badge" aria-hidden="true"></span></div>
+          </div>
+        </section>
+
+      </div><!-- end #album-scroll-area -->
+    </main><!-- end #album-panel -->
+
+  </div><!-- end #top-section -->
+
+
+  <!--
+    ═══════════════════════════════════════════════════════════════
+    BOTTOM SECTION — scrollable stats
+    Begins immediately below the 100svh boundary.
+    Two stacked layers: Season History → Current Season
+    ═══════════════════════════════════════════════════════════════
+  -->
+  <div id="stats-section">
+
+    <!--
+      ── LAYER 1: Season History ──────────────────────────────────
+      Empty until the first season completes; hidden attribute
+      removed by stats.js after the first SeasonRecord is appended.
+    -->
+    <section id="season-history-layer" aria-label="Season history across all completed runs" hidden>
+
+      <div class="layer-header">
+        <h2 class="layer-title">Season History</h2>
+        <button type="button" id="btn-clear-history">Clear History</button>
+      </div>
+
+      <!-- Season Outcome Chart: two vertically stacked panels sharing an X-axis -->
+      <div id="season-outcome-chart-container" class="chart-container">
+        <canvas
+          id="season-outcome-chart"
+          aria-label="Season outcome chart: sticker collection and star economy per completed season">
+        </canvas>
+      </div>
+
+      <!-- Strategy Averages Block — one card per distinct preset in history -->
+      <div
+        id="strategy-averages"
+        class="averages-grid"
+        aria-label="Average performance per strategy preset">
+        <!-- Average cards injected by stats.js -->
+      </div>
+
+      <!-- Season History Table — one row per completed season, newest first -->
+      <div id="season-history-table-wrapper" class="table-wrapper">
+        <table id="season-history-table" aria-label="Season history log">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Seed</th>
+              <th scope="col">Preset</th>
+              <th scope="col">Stickers</th>
+              <th scope="col">Stars spent</th>
+              <th scope="col">Vault (3★ / 4★ / 5★)</th>
+              <th scope="col">Stars left</th>
+              <th scope="col">Done?</th>
+            </tr>
+          </thead>
+          <tbody id="season-history-tbody">
+            <!-- Rows injected by stats.js, newest season at top -->
+          </tbody>
+        </table>
+      </div>
+
+    </section><!-- end #season-history-layer -->
+
+
+    <!--
+      ── LAYER 2: Current Season ──────────────────────────────────
+      Hidden until at least one season completes; hidden attribute
+      removed by stats.js after renderStats() is first called.
+      Contains 7 ordered subsections.
+    -->
+    <section id="current-season-layer" aria-label="Detailed results for the most recently completed season" hidden>
+
+      <h2 class="layer-title">Current Season Results</h2>
+
+      <!-- ── 1. Season Summary ──────────────────────────────── -->
+      <section
+        id="stats-season-summary"
+        class="stats-subsection"
+        aria-label="Season summary statistics">
+        <h3 class="subsection-title">Season Summary</h3>
+        <div id="summary-cards-grid" class="stat-cards-grid">
+          <!--
+            Stat cards injected by stats.js.
+            One card per metric: packs by source, stickers drawn,
+            duplicates, stars earned/spent, unique count, first 5★ day,
+            vault purchases, season result banner.
+          -->
+        </div>
+      </section>
+
+      <!-- ── 2. Daily Timeline ──────────────────────────────── -->
+      <section
+        id="stats-daily-timeline"
+        class="stats-subsection"
+        aria-label="Day-by-day simulation timeline">
+        <h3 class="subsection-title">Daily Timeline</h3>
+        <div id="daily-timeline-scroll" class="timeline-scroll-wrapper">
+          <div
+            id="daily-timeline-track"
+            class="timeline-track"
+            aria-label="50-day simulation timeline">
+            <!--
+              50 day-column elements injected by stats.js.
+              Each carries data-day, and optionally
+              data-vault-start and data-zero-stars attributes
+              for conditional styling via CSS attribute selectors.
+            -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 3. Cumulative Progress Chart ──────────────────── -->
+      <section
+        id="stats-cumulative-chart"
+        class="stats-subsection"
+        aria-label="Cumulative sticker and star progress chart">
+        <h3 class="subsection-title">Cumulative Progress</h3>
+        <div id="cumulative-chart-container" class="chart-container">
+          <svg
+            id="chart-cumulative"
+            role="img"
+            aria-label="Line chart of unique stickers collected and star balance across all 50 days">
+            <!--
+              Drawn entirely by stats.js.
+              Left Y-axis: unique stickers 0–108 (--color-green line).
+              Right Y-axis: star balance, dynamic max (--color-gold line).
+              Dashed amber vertical line at vaultConfig.startDay when applicable.
+              Both lines animate left-to-right over 800 ms on render.
+            -->
+          </svg>
+        </div>
+      </section>
+
+      <!-- ── 4. Pack Yield Breakdown ───────────────────────── -->
+      <section
+        id="stats-pack-yield"
+        class="stats-subsection"
+        aria-label="Pack yield rarity distribution breakdown">
+        <h3 class="subsection-title">Pack Yield Breakdown</h3>
+
+        <div id="pack-yield-legend" class="yield-legend" role="list" aria-label="Rarity colour legend">
+          <span class="legend-item" data-rarity="1" role="listitem">1★</span>
+          <span class="legend-item" data-rarity="2" role="listitem">2★</span>
+          <span class="legend-item" data-rarity="3" role="listitem">3★</span>
+          <span class="legend-item" data-rarity="4" role="listitem">4★</span>
+          <span class="legend-item" data-rarity="5" role="listitem">5★</span>
+        </div>
+
+        <div id="pack-yield-rows" class="yield-rows">
+          <!--
+            One row per pack type opened this season, injected by stats.js.
+            Vault packs appear as separate rows from regular packs of
+            the same tier (Vault 3★, Vault 4★, Vault 5★).
+            Each row carries two horizontal stacked bars:
+              data-bar-type="actual"   — observed rarity distribution
+              data-bar-type="expected" — analytically correct distribution
+          -->
+        </div>
+      </section>
+
+      <!-- ── 5. Rarity Heatmap ──────────────────────────────── -->
+      <section
+        id="stats-rarity-heatmap"
+        class="stats-subsection"
+        aria-label="Sticker rarity collection heatmap">
+        <h3 class="subsection-title">Rarity Heatmap</h3>
+        <p class="subsection-hint">
+          Cell colour = rarity accent; opacity fades from Day 1 (vivid) to Day 50 (dim). Grey = not collected.
+        </p>
+
+        <div id="heatmap-grid">
+
+          <!-- 1★ row — 27 cells (IDs 1–27) -->
+          <div class="heatmap-row" data-rarity="1">
+            <span class="heatmap-row-label" aria-hidden="true">1★</span>
+            <div class="heatmap-cells" role="list" aria-label="1★ sticker heatmap cells">
+              <div class="heatmap-cell" data-sticker-id="1"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 1 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="2"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 2 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="3"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 3 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="4"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 4 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="5"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 5 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="6"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 6 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="7"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 7 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="8"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 8 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="9"  data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 9 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="10" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 10 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="11" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 11 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="12" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 12 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="13" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 13 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="14" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 14 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="15" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 15 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="16" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 16 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="17" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 17 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="18" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 18 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="19" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 19 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="20" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 20 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="21" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 21 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="22" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 22 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="23" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 23 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="24" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 24 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="25" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 25 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="26" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 26 (1★)"></div>
+              <div class="heatmap-cell" data-sticker-id="27" data-rarity="1" role="listitem" tabindex="0" aria-label="Sticker 27 (1★)"></div>
+            </div>
+          </div>
+
+          <!-- 2★ row — 21 cells (IDs 28–48) -->
+          <div class="heatmap-row" data-rarity="2">
+            <span class="heatmap-row-label" aria-hidden="true">2★</span>
+            <div class="heatmap-cells" role="list" aria-label="2★ sticker heatmap cells">
+              <div class="heatmap-cell" data-sticker-id="28" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 28 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="29" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 29 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="30" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 30 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="31" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 31 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="32" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 32 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="33" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 33 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="34" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 34 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="35" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 35 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="36" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 36 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="37" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 37 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="38" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 38 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="39" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 39 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="40" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 40 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="41" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 41 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="42" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 42 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="43" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 43 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="44" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 44 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="45" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 45 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="46" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 46 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="47" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 47 (2★)"></div>
+              <div class="heatmap-cell" data-sticker-id="48" data-rarity="2" role="listitem" tabindex="0" aria-label="Sticker 48 (2★)"></div>
+            </div>
+          </div>
+
+          <!-- 3★ row — 18 cells (IDs 49–66) -->
+          <div class="heatmap-row" data-rarity="3">
+            <span class="heatmap-row-label" aria-hidden="true">3★</span>
+            <div class="heatmap-cells" role="list" aria-label="3★ sticker heatmap cells">
+              <div class="heatmap-cell" data-sticker-id="49" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 49 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="50" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 50 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="51" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 51 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="52" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 52 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="53" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 53 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="54" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 54 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="55" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 55 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="56" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 56 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="57" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 57 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="58" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 58 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="59" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 59 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="60" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 60 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="61" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 61 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="62" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 62 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="63" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 63 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="64" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 64 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="65" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 65 (3★)"></div>
+              <div class="heatmap-cell" data-sticker-id="66" data-rarity="3" role="listitem" tabindex="0" aria-label="Sticker 66 (3★)"></div>
+            </div>
+          </div>
+
+          <!-- 4★ row — 18 cells (IDs 67–84) -->
+          <div class="heatmap-row" data-rarity="4">
+            <span class="heatmap-row-label" aria-hidden="true">4★</span>
+            <div class="heatmap-cells" role="list" aria-label="4★ sticker heatmap cells">
+              <div class="heatmap-cell" data-sticker-id="67" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 67 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="68" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 68 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="69" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 69 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="70" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 70 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="71" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 71 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="72" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 72 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="73" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 73 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="74" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 74 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="75" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 75 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="76" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 76 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="77" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 77 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="78" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 78 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="79" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 79 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="80" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 80 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="81" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 81 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="82" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 82 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="83" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 83 (4★)"></div>
+              <div class="heatmap-cell" data-sticker-id="84" data-rarity="4" role="listitem" tabindex="0" aria-label="Sticker 84 (4★)"></div>
+            </div>
+          </div>
+
+          <!-- 5★ row — 24 cells (IDs 85–108) -->
+          <div class="heatmap-row" data-rarity="5">
+            <span class="heatmap-row-label" aria-hidden="true">5★</span>
+            <div class="heatmap-cells" role="list" aria-label="5★ sticker heatmap cells">
+              <div class="heatmap-cell" data-sticker-id="85"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 85 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="86"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 86 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="87"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 87 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="88"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 88 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="89"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 89 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="90"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 90 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="91"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 91 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="92"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 92 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="93"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 93 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="94"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 94 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="95"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 95 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="96"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 96 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="97"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 97 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="98"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 98 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="99"  data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 99 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="100" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 100 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="101" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 101 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="102" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 102 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="103" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 103 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="104" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 104 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="105" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 105 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="106" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 106 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="107" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 107 (5★)"></div>
+              <div class="heatmap-cell" data-sticker-id="108" data-rarity="5" role="listitem" tabindex="0" aria-label="Sticker 108 (5★)"></div>
+            </div>
+          </div>
+
+        </div><!-- end #heatmap-grid -->
+      </section>
+
+      <!-- ── 6. Star Economy Waterfall ─────────────────────── -->
+      <section
+        id="stats-star-waterfall"
+        class="stats-subsection"
+        aria-label="Star economy waterfall chart">
+        <h3 class="subsection-title">Star Economy Waterfall</h3>
+
+        <p id="waterfall-summary" aria-live="polite">
+          <!--
+            "Total earned: X  −  Total spent: Y  =  Remaining: Z"
+            Written by stats.js after render. Identity:
+              total inflows − total outflows = final star balance
+          -->
+        </p>
+
+        <div id="star-waterfall-chart-container" class="chart-container">
+          <svg
+            id="chart-star-waterfall"
+            role="img"
+            aria-label="Waterfall bar chart showing star inflows by source/rarity, outflows by vault tier, and final balance">
+            <!--
+              Drawn by stats.js.
+              Inflow bars (--color-green, upward): login dupes, challenge dupes,
+                vault remainder dupes — each broken down by rarity 1★–5★.
+              Outflow bars (--color-red, downward): stars spent on 3★/4★/5★ vault packs.
+              Final bar (--color-gold): stars remaining.
+              Every segment labelled with numeric value.
+            -->
+          </svg>
+        </div>
+      </section>
+
+      <!-- ── 7. Strategy Comparison ─────────────────────────── -->
+      <section
+        id="stats-strategy-comparison"
+        class="stats-subsection"
+        aria-label="Strategy comparison table for this seed">
+        <h3 class="subsection-title">Strategy Comparison (this seed)</h3>
+        <p class="subsection-hint">
+          Same seed and challenge setting; only vault strategy differs.
+          Best unique count highlighted in green.
+        </p>
+
+        <div class="table-wrapper">
+          <table id="comparison-table" aria-label="Strategy comparison: unique stickers and star economy per preset">
+            <thead>
+              <tr>
+                <th scope="col">Config</th>
+                <th scope="col">Unique stickers</th>
+                <th scope="col">Stars spent</th>
+                <th scope="col">3★ packs</th>
+                <th scope="col">4★ packs</th>
+                <th scope="col">5★ packs</th>
+                <th scope="col">Stars left</th>
+              </tr>
+            </thead>
+            <tbody id="comparison-tbody">
+              <!--
+                Injected by stats.js.
+                Fixed row order: Spend Greedily, 5★ Only, Hoard Then Spend,
+                End-Season Blitz, Never Spend, [Your Config if custom].
+                5 rows if user matches a preset; 6 if custom.
+                Best-unique row gets class "row-best".
+                Each row includes an inline progress bar proportional to 108.
+                One-sentence annotation below each row.
+              -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </section><!-- end #current-season-layer -->
+
+  </div><!-- end #stats-section -->
+
+
+  <!-- Entry point — ui.js imports engine.js and stats.js as ES modules -->
+  <script type="module" src="ui.js"></script>
+
+</body>
+</html>
