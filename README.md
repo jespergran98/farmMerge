@@ -32,32 +32,46 @@ Day 5: five-star sticker pack
 Every day you can complete up to 10 tasks to earn 10 sticker packs.
 It is impossible to get a five-star sticker pack from daily challenges.
 Pack rarity is determined by task difficulty — the harder the task, the higher the star rating of the pack it rewards.
+Each row below is one specific task in the daily challenge list (10 tasks total per day):
 
-The 4 task types, from easiest to hardest:
-1. Open supplies
-2. Consume energy
-3. Harvest
-4. Complete orders
-
-The 10 challenge types given are completely random each day.
-
-⚠️ The exact mapping of which task type gives which star-rated pack is UNKNOWN — not confirmed from any source.
-
-Bonus for completing all 10 tasks in a day: 120 energy + 80 crates + 36 gems
+| Task # | Harvest | Spend energy | Complete orders | Open supplies | Pack reward |
+|--------|---------|--------------|-----------------|---------------|-------------|
+| 1      | 10      | 70           | 4               | 40            | 1-star      |
+| 2      | 20      | 140          | 8               | 80            | 2-star      |
+| 3      | 35      | 210          | 12              | 120           | 2-star      |
+| 4      | 45      | 280          | 16              | 160           | 2-star      |
+| 5      | 55      | 350          | 20              | 200           | 2-star      |
+| 6      | 65      | 420          | 24              | 240           | 3-star      |
+| 7      | 75      | 490          | 28              | 280           | 3-star      |
+| 8      | 90      | 560          | 32              | 320           | 4-star      |
+| 9      | 100     | 630          | 36              | 360           | 4-star      |
+| 10     | 110     | 700          | 40              | 400           | 4-star      |
 
 ---
 
 **Sticker pack contents**
 
-When opening any sticker pack, you receive at least one sticker matching the pack's rarity. The rarer the pack, the more and rarer the additional stickers it contains.
+Each pack always contains one guaranteed sticker of the pack's own rarity. The remaining slots are drawn randomly according to the probabilities below.
 
-| Pack   | Contents                                   |
-|--------|--------------------------------------------|
-| 1-star | 2× one-star stickers                       |
-| 2-star | 2× one-star stickers + 1× two-star sticker |
-| 3-star | ⚠️ UNKNOWN — not confirmed from any source |
-| 4-star | ⚠️ UNKNOWN — not confirmed from any source |
-| 5-star | ⚠️ UNKNOWN — not confirmed from any source |
+**1-star pack** — 2 stickers total
+- 1× guaranteed 1-star
+- 1 additional slot: 70% → 1-star, 30% → 2-star
+
+**2-star pack** — 3 stickers total
+- 1× guaranteed 2-star
+- 2 additional slots, each independently: 50% → 1-star, 40% → 2-star, 10% → 3-star
+
+**3-star pack** — 4 stickers total
+- 1× guaranteed 3-star
+- 3 additional slots, each independently: 40% → 1-star, 35% → 2-star, 20% → 3-star, 5% → 4-star
+
+**4-star pack** — 5 stickers total
+- 1× guaranteed 4-star
+- 4 additional slots, each independently: 30% → 1-star, 30% → 2-star, 25% → 3-star, 10% → 4-star, 5% → 5-star
+
+**5-star pack** — 6 stickers total
+- 1× guaranteed 5-star
+- 5 additional slots, each independently: 20% → 1-star, 25% → 2-star, 25% → 3-star, 20% → 4-star, 10% → 5-star
 
 ---
 
@@ -69,7 +83,7 @@ When opening any sticker pack, you receive at least one sticker matching the pac
 | 2-star    | 21      |
 | 3-star    | 18      |
 | 4-star    | 18      |
-| 5-star    | 25      |
+| 5-star    | 24      |
 | **Total** | **108** |
 
 ---
@@ -77,7 +91,6 @@ When opening any sticker pack, you receive at least one sticker matching the pac
 **Star currency and the Star Vault**
 
 Duplicate system:
-If you receive a sticker you already own, it is automatically converted into stars based on its rarity:
 
 | Sticker rarity | Stars awarded |
 |----------------|---------------|
@@ -88,10 +101,10 @@ If you receive a sticker you already own, it is automatically converted into sta
 | 5-star         | 5 stars       |
 
 Star Vault packs:
-Stars can be spent in the Star Vault to buy sticker packs that each guarantee one non-duplicate sticker of the pack's rarity. The Star Vault becomes unavailable for a given tier once you have collected all stickers of that rarity (since a non-duplicate can no longer be guaranteed).
+Stars can be spent in the Star Vault to buy sticker packs that each guarantee one non-duplicate sticker of the pack's rarity. The remaining sticker slots follow the exact same drop probabilities as a normal pack of that rarity. The Star Vault becomes unavailable for a given tier once you have collected all stickers of that rarity (since a non-duplicate can no longer be guaranteed).
 
-| Vault Pack | Star cost | Guaranteed contents       | Additional contents |
-|------------|-----------|---------------------------|---------------------|
-| 3-star     | 250 stars | 1× new 3-star sticker     | ⚠️ UNKNOWN          |
-| 4-star     | 500 stars | 1× new 4-star sticker     | ⚠️ UNKNOWN          |
-| 5-star     | 800 stars | 1× new 5-star sticker     | ⚠️ UNKNOWN          |
+| Vault Pack | Star cost | Stickers total | Guaranteed             | Remaining slots                          |
+|------------|-----------|----------------|------------------------|----------------------------------------  |
+| 3-star     | 250 stars | 4              | 1× new 3-star sticker  | 3 slots, same odds as normal 3-star pack |
+| 4-star     | 500 stars | 5              | 1× new 4-star sticker  | 4 slots, same odds as normal 4-star pack |
+| 5-star     | 800 stars | 6              | 1× new 5-star sticker  | 5 slots, same odds as normal 5-star pack |
