@@ -4,4 +4,4 @@ The UI must fill exactly 100svh in the top section (no scroll, no overflow) with
 
 The simulation should be quick and give detailed information of the average sticker count at the end of each simulated season, if the user applied day settings to when stars were spent on sticker packs, save these settings in stats, so the user can compare the final sticker count at the end of a season depending on which days the sticker packs were opened. When the fast speed is activated for simulation speed, it should run at the fastest time possible, at runtime. The logic must be clean, flawless and perfect.
 
-Provide clean, streamlined, refactored and perfect code following 2026 practices.
+Provide clean, streamlined, refactored and perfect code following 2026 practices. Provide the code before running out of token limit. The index.html is already complete, provide the simulator.js and styles.css files.
