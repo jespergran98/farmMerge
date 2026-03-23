@@ -1,0 +1,1843 @@
+/* =============================================================================
+   Farm Merge Valley — Sticker Season Simulator
+   styles.css — all visual styling, CSS variables, keyframe animations
+   No inline styles exist in the project; every visual rule lives here.
+   ============================================================================= */
+
+
+/* ─── GOOGLE FONTS ───────────────────────────────────────────────────────────
+   Fredoka One  — headings, card labels, badge numbers, preset btn labels,
+                  day counter, star counter
+   Nunito       — body text, event log, stat values, table content, tooltips
+   Both are linked in <head>; declarations here exist as fallback anchors.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+
+/* =============================================================================
+   1. CUSTOM PROPERTIES
+   ============================================================================= */
+
+:root {
+  /* Colour palette */
+  --color-gold:   #F5C842;   /* wheat gold   — stars, accents, 5★           */
+  --color-red:    #C0392B;   /* barn red     — duplicates, outflows, warns   */
+  --color-orange: #E67E22;   /* harvest orange — End-Season Blitz            */
+  --color-green:  #7DAA72;   /* sage green   — collected, inflows, progress  */
+  --color-cream:  #FDF6E3;   /* cream        — panel backgrounds             */
+  --color-brown:  #6B4423;   /* soil brown   — borders, headers, primary txt */
+  --color-sky:    #5B9BD5;   /* sky blue     — 3★ rarity, Hoard preset       */
+  --color-purple: #8E6BBF;   /* royal purple — 4★ rarity                     */
+
+  /* Rarity accent colours (full-saturation) */
+  --rarity-1-color:  #9E9E9E;  /* silver-grey */
+  --rarity-2-color:  #7DAA72;  /* leaf green  */
+  --rarity-3-color:  #5B9BD5;  /* sky blue    */
+  --rarity-4-color:  #8E6BBF;  /* royal purple*/
+  --rarity-5-color:  #F5C842;  /* wheat gold  */
+
+  /* Rarity card tint backgrounds (lightened) */
+  --rarity-1-tint:   #E6E6E6;
+  --rarity-2-tint:   #C8DFBF;
+  --rarity-3-tint:   #BDD4ED;
+  --rarity-4-tint:   #D3C8EC;
+  --rarity-5-tint:   #FAE89E;
+
+  /* Rarity header fill colours */
+  --rarity-1-header: #ABABAB;
+  --rarity-2-header: #7DAA72;
+  --rarity-3-header: #5B9BD5;
+  --rarity-4-header: #8E6BBF;
+  --rarity-5-header: #F5C842;
+
+  /* Animation — ui.js overrides these at runtime */
+  --anim-dur:       400ms;   /* master duration; set to 0ms at Max speed  */
+  --shimmer-state:  running; /* set to paused at Max speed by ui.js       */
+
+  /* Derived durations (auto-resolve to 0 when --anim-dur: 0ms) */
+  --dur-pop:        var(--anim-dur);                      /* card pop-in   */
+  --dur-dupe:       calc(var(--anim-dur) * 0.5);          /* dupe flash    */
+  --dur-star:       calc(var(--anim-dur) * 0.8);          /* star roll     */
+  --dur-progress:   calc(var(--anim-dur) * 0.6);          /* progress bar  */
+  --dur-log:        calc(var(--anim-dur) * 0.4);          /* log slide-in  */
+
+  /* Card sizing — all 108 fit the right panel at 1080p without overflow */
+  --card-size: clamp(24px, 3.2vw, 42px);
+  --card-gap:  clamp(2px,  0.35vw, 5px);
+
+  /* Spacing rhythm */
+  --panel-pad:   10px;
+  --radius-card: 8px;
+  --border-panel: 2.5px solid var(--color-brown);
+}
+
+
+/* =============================================================================
+   2. MAX SPEED — zero-duration global disable
+   ui.js sets --anim-dur: 0ms on :root at Max speed.
+   CSS style queries kill every transition and animation in that state.
+   ============================================================================= */
+
+html {
+  container-type: style;
+  container-name: root;
+}
+
+@container root style(--anim-dur: 0ms) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+
+/* =============================================================================
+   3. RESET & BASE
+   ============================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-brown);
+  background-color: #EDE0C4;   /* warm parchment page bg */
+  overflow-x: hidden;
+}
+
+h1, h2, h3,
+.counter-value,
+.counter-unit,
+.counter-sep,
+.counter-max,
+.card-badge,
+.preset-btn,
+#day-counter,
+#star-counter,
+#day-current,
+#star-digit-display,
+.speed-btn,
+.rarity-title,
+.card-label,
+.layer-title,
+#app-title,
+#app-subtitle {
+  font-family: 'Fredoka One', 'Georgia', serif;
+  font-weight: 400;   /* Fredoka One is a single-weight face */
+}
+
+/* Nunito elements */
+body,
+#event-log,
+.event-entry,
+.field-label,
+label,
+input,
+select,
+.field-hint,
+.subsection-title,
+.subsection-hint,
+table,
+th,
+td,
+.tooltip,
+.stat-card,
+.stat-value,
+.stat-label,
+.heatmap-tooltip,
+.timeline-day-col,
+.row-annotation,
+.averages-card {
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+}
+
+
+/* =============================================================================
+   4. GRAIN TEXTURE FILTER — hide the invisible <svg>
+   ============================================================================= */
+
+#grain-filter {
+  display: block;
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+
+/* =============================================================================
+   5. TOP SECTION — exactly 100svh, two-column, no overflow, no scroll
+   ============================================================================= */
+
+#top-section {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  gap: 8px;
+  padding: 8px;
+  background-color: #EDE0C4;
+}
+
+
+/* =============================================================================
+   6. PANEL CARD BASE — shared by #control-panel and #album-panel
+   ============================================================================= */
+
+.panel {
+  border-radius: var(--radius-card);
+  border: var(--border-panel);
+  background: var(--color-cream);
+  position: relative;      /* required for ::before grain overlay */
+  overflow: hidden;        /* clip grain pseudo + child content */
+}
+
+/* Grain texture overlay — applied to all panels */
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  filter: url(#grain);
+  opacity: 0.07;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+/* All direct content inside a panel sits above the grain layer */
+.panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* =============================================================================
+   7. LEFT PANEL — #control-panel (~38%)
+   ============================================================================= */
+
+#control-panel {
+  flex: 0 0 38%;
+  max-width: 38%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--panel-pad);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brown) transparent;
+}
+
+#control-panel::-webkit-scrollbar        { width: 5px; }
+#control-panel::-webkit-scrollbar-thumb  { background: var(--color-brown); border-radius: 3px; }
+#control-panel::-webkit-scrollbar-track  { background: transparent; }
+
+
+/* ── Brand heading ─────────────────────────────────────────────────────────── */
+
+#panel-header {
+  text-align: center;
+  padding: 4px 0 2px;
+  border-bottom: 2px solid var(--color-brown);
+  margin-bottom: 2px;
+}
+
+#app-title {
+  font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+  color: var(--color-brown);
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+}
+
+#app-subtitle {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: #8B6040;
+  margin-top: 1px;
+  font-style: italic;
+}
+
+
+/* ── Simulation counters ───────────────────────────────────────────────────── */
+
+#sim-counters {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  background: rgba(107, 68, 35, 0.06);
+  border-radius: 6px;
+  border: 1px solid rgba(107, 68, 35, 0.15);
+}
+
+#day-counter,
+#star-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: clamp(1rem, 1.6vw, 1.3rem);
+  color: var(--color-brown);
+}
+
+#day-current,
+#star-digit-display {
+  font-size: clamp(1.3rem, 2vw, 1.8rem);
+  color: var(--color-brown);
+  min-width: 2ch;
+  text-align: right;
+}
+
+.counter-sep,
+.counter-max,
+.counter-unit {
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.star-currency-icon {
+  color: var(--color-gold);
+  font-size: 1em;
+  font-family: 'Fredoka One', serif;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Digit-slot roll container — ui.js wraps each digit in a clipped span */
+#star-digit-display {
+  display: inline-flex;
+  overflow: hidden;
+  vertical-align: baseline;
+}
+
+.digit-slot {
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1;
+  height: 1.2em;
+  vertical-align: bottom;
+}
+
+.digit-slot span {
+  display: block;
+  transition: transform var(--dur-star) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+/* ── Control group container ──────────────────────────────────────────────── */
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  border: 1px solid rgba(107, 68, 35, 0.12);
+}
+
+.control-group-label {
+  font-size: 0.78rem;
+  font-family: 'Fredoka One', serif;
+  letter-spacing: 0.4px;
+  color: var(--color-brown);
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 1px;
+}
+
+
+/* ── Buttons — shared base ─────────────────────────────────────────────────── */
+
+button {
+  cursor: pointer;
+  border: 2px solid var(--color-brown);
+  background: var(--color-cream);
+  color: var(--color-brown);
+  border-radius: 6px;
+  font-family: 'Fredoka One', serif;
+  font-size: 0.88rem;
+  padding: 5px 10px;
+  transition:
+    background-color var(--dur-dupe) ease,
+    transform          60ms ease,
+    box-shadow         60ms ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+button:hover:not(:disabled) {
+  background: #EEE0C0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+
+/* ── Button rows (Run / Pause / Reset, Auto) ──────────────────────────────── */
+
+.btn-row {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+}
+
+#btn-group-main {
+  flex-wrap: nowrap;
+}
+
+#btn-group-main button {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+#btn-run    { background: var(--color-green); color: #fff; border-color: #527A49; }
+#btn-run:hover:not(:disabled) { background: #6B9760; }
+
+#btn-pause  { background: var(--color-gold); color: var(--color-brown); border-color: #C4A030; }
+#btn-pause:hover:not(:disabled) { background: #E8BC38; }
+
+#btn-reset  { background: #D4A97A; color: var(--color-brown); border-color: var(--color-brown); }
+#btn-reset:hover:not(:disabled) { background: #C8985F; }
+
+
+/* Auto button */
+#btn-group-auto {
+  gap: 8px;
+}
+
+#btn-auto {
+  background: #EDE0C4;
+  border-color: var(--color-brown);
+}
+
+#btn-auto[aria-pressed="true"],
+#btn-auto.is-active {
+  background: #F5C842;
+  border-color: #B89020;
+  color: var(--color-brown);
+}
+
+/* Auto-play pulse — amber box-shadow on active auto button group */
+#btn-group-auto.is-active {
+  animation: auto-pulse 1.2s ease-in-out infinite;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-gold);
+  color: var(--color-brown);
+  font-family: 'Fredoka One', serif;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1.5px solid #C4A030;
+  text-transform: uppercase;
+}
+
+
+/* ── Speed selector — segmented pill ─────────────────────────────────────── */
+
+#speed-selector {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: var(--border-panel);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.speed-btn {
+  flex: 1;
+  border: none;
+  border-right: 1.5px solid var(--color-brown);
+  border-radius: 0;
+  font-family: 'Fredoka One', serif;
+  font-size: 0.82rem;
+  padding: 5px 4px;
+  background: var(--color-cream);
+  color: var(--color-brown);
+  transition: background-color calc(var(--anim-dur) * 0.3) ease;
+}
+
+.speed-btn:last-child {
+  border-right: none;
+}
+
+.speed-btn:hover:not([aria-pressed="true"]) {
+  background: #EEE0C0;
+  transform: none;
+  box-shadow: none;
+}
+
+.speed-btn[aria-pressed="true"] {
+  background: var(--color-gold);
+  color: var(--color-brown);
+  font-weight: 400;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+  transform: none;
+}
+
+
+/* ── Form fields ──────────────────────────────────────────────────────────── */
+
+#sim-params {
+  gap: 4px;
+}
+
+.field-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.field-row--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.field-row--stack label {
+  margin-bottom: 2px;
+}
+
+.field-row--inline {
+  flex-direction: row;
+  align-items: center;
+}
+
+.field-row label,
+.field-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: var(--color-brown);
+  flex-shrink: 0;
+}
+
+input[type="number"],
+input[type="text"],
+select {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  color: var(--color-brown);
+  background: #FFF8EB;
+  border: 1.5px solid rgba(107, 68, 35, 0.4);
+  border-radius: 5px;
+  padding: 4px 7px;
+  width: 90px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-sky);
+  box-shadow: 0 0 0 2px rgba(91, 155, 213, 0.3);
+}
+
+.field-row--stack select,
+.field-row--stack input {
+  width: 100%;
+}
+
+.field-hint {
+  font-size: 0.7rem;
+  color: #8B6040;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-green);
+  cursor: pointer;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+
+/* ── Challenge group ──────────────────────────────────────────────────────── */
+
+#challenge-group select {
+  width: 100%;
+}
+
+#challenge-group .field-row--stack {
+  gap: 3px;
+}
+
+
+/* ── Vault strategy ───────────────────────────────────────────────────────── */
+
+#vault-group {
+  gap: 5px;
+}
+
+#vault-group .control-group-label {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+#active-preset-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: #8B6040;
+  font-style: italic;
+}
+
+#preset-name-display {
+  font-style: normal;
+  font-family: 'Fredoka One', serif;
+  color: var(--color-brown);
+}
+
+/* Preset buttons row */
+.preset-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.preset-btn {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--color-brown);
+  background: var(--color-cream);
+  color: var(--color-brown);
+  transition: background-color 120ms ease, transform 60ms ease;
+}
+
+.preset-btn:hover:not(.is-active) {
+  background: #EEE0C0;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Preset-specific accent colours when active */
+.preset-btn.is-active[data-preset="spend-greedily"] {
+  background: var(--color-green);
+  color: #fff;
+  border-color: #527A49;
+}
+.preset-btn.is-active[data-preset="5star-only"] {
+  background: var(--color-gold);
+  color: var(--color-brown);
+  border-color: #C4A030;
+}
+.preset-btn.is-active[data-preset="hoard-then-spend"] {
+  background: var(--color-sky);
+  color: #fff;
+  border-color: #3A7AB0;
+}
+.preset-btn.is-active[data-preset="end-season-blitz"] {
+  background: var(--color-orange);
+  color: #fff;
+  border-color: #B86018;
+}
+.preset-btn.is-active[data-preset="never-spend"] {
+  background: #9E9E9E;
+  color: #fff;
+  border-color: #6E6E6E;
+}
+
+/* Vault tiers fieldset */
+#vault-tiers-fieldset {
+  border: 1px solid rgba(107, 68, 35, 0.2);
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#vault-tiers-fieldset legend {
+  font-size: 0.7rem;
+  color: var(--color-brown);
+  padding: 0 4px;
+  opacity: 0.7;
+}
+
+/* Priority order list */
+#priority-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#priority-label {
+  font-size: 0.72rem;
+  color: var(--color-brown);
+  opacity: 0.8;
+}
+
+#priority-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+}
+
+.priority-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.5);
+  border: 1px solid rgba(107,68,35,0.2);
+  border-radius: 5px;
+  padding: 3px 8px;
+}
+
+.priority-tier-label {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.82rem;
+  color: var(--color-brown);
+}
+
+.priority-btn-group {
+  display: flex;
+  gap: 3px;
+}
+
+.priority-btn {
+  padding: 2px 6px;
+  font-size: 0.65rem;
+  border-radius: 4px;
+  border-width: 1.5px;
+  min-width: 24px;
+  text-align: center;
+}
+
+
+/* ── Live event log ────────────────────────────────────────────────────────── */
+
+#event-log-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+#event-log {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.event-entry {
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(0.65rem, 1vw, 0.78rem);
+  color: var(--color-brown);
+  background: rgba(255,255,255,0.55);
+  border-left: 3px solid var(--color-brown);
+  border-radius: 0 4px 4px 0;
+  padding: 3px 6px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: log-slide-in var(--dur-log) ease-out both;
+}
+
+.event-entry[data-type="login"]     { border-left-color: var(--color-sky); }
+.event-entry[data-type="challenge"] { border-left-color: var(--color-green); }
+.event-entry[data-type="vault"]     { border-left-color: var(--color-gold); }
+
+.event-new   { color: var(--color-green); font-weight: 700; }
+.event-dupe  { color: var(--color-red); }
+.event-stars { color: var(--color-gold); font-weight: 700; }
+
+/* Rarity inline badges */
+.rarity-pip {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin: 0 1px;
+}
+.rarity-pip[data-rarity="1"] { background: var(--rarity-1-color); }
+.rarity-pip[data-rarity="2"] { background: var(--rarity-2-color); }
+.rarity-pip[data-rarity="3"] { background: var(--rarity-3-color); }
+.rarity-pip[data-rarity="4"] { background: var(--rarity-4-color); }
+.rarity-pip[data-rarity="5"] { background: var(--rarity-5-color); }
+
+
+/* =============================================================================
+   8. RIGHT PANEL — #album-panel (~62%)
+   ============================================================================= */
+
+#album-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--panel-pad);
+  gap: 6px;
+}
+
+
+/* ── Album header ─────────────────────────────────────────────────────────── */
+
+#album-header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#album-title {
+  font-family: 'Fredoka One', serif;
+  font-size: clamp(1rem, 1.6vw, 1.4rem);
+  color: var(--color-brown);
+  line-height: 1;
+}
+
+
+/* ── Total progress bar ───────────────────────────────────────────────────── */
+
+#album-progress-track {
+  height: 10px;
+  background: rgba(107, 68, 35, 0.12);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(107, 68, 35, 0.2);
+}
+
+#album-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--color-green) 0%, #9BC98F 100%);
+  border-radius: 5px;
+  transition: width var(--dur-progress) ease-out;
+}
+
+#album-progress-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  color: #6B4423;
+  opacity: 0.85;
+}
+
+
+/* ── Album scroll area — contains all rarity sections ─────────────────────── */
+
+#album-scroll-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow: hidden;   /* no scroll — all 108 cards must fit */
+}
+
+
+/* ── Rarity sections ──────────────────────────────────────────────────────── */
+
+.rarity-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-height: 0;
+}
+
+.rarity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(0,0,0,0.1);
+}
+
+/* Rarity header backgrounds */
+.rarity-header[data-rarity="1"] { background: var(--rarity-1-header); color: #fff; }
+.rarity-header[data-rarity="2"] { background: var(--rarity-2-header); color: #fff; }
+.rarity-header[data-rarity="3"] { background: var(--rarity-3-header); color: #fff; }
+.rarity-header[data-rarity="4"] { background: var(--rarity-4-header); color: #fff; }
+.rarity-header[data-rarity="5"] { background: var(--rarity-5-header); color: var(--color-brown); }
+
+.rarity-title {
+  font-family: 'Fredoka One', serif;
+  font-size: clamp(0.7rem, 1.1vw, 0.9rem);
+  letter-spacing: 0.3px;
+}
+
+.rarity-progress {
+  font-family: 'Fredoka One', serif;
+  font-size: clamp(0.65rem, 1vw, 0.82rem);
+  opacity: 0.9;
+}
+
+
+/* ── Card grid ────────────────────────────────────────────────────────────── */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-size), 1fr));
+  gap: var(--card-gap);
+  align-content: start;
+}
+
+
+/* =============================================================================
+   9. STICKER CARDS
+   ============================================================================= */
+
+/* ── Per-rarity card properties (set on ALL cards of that rarity) ───────────── */
+.sticker-card[data-rarity="1"] {
+  --card-bg:   var(--rarity-1-tint);
+  --card-glow: #9E9E9E55;
+}
+.sticker-card[data-rarity="2"] {
+  --card-bg:   var(--rarity-2-tint);
+  --card-glow: #7DAA7255;
+}
+.sticker-card[data-rarity="3"] {
+  --card-bg:   var(--rarity-3-tint);
+  --card-glow: #5B9BD555;
+}
+.sticker-card[data-rarity="4"] {
+  --card-bg:   var(--rarity-4-tint);
+  --card-glow: #8E6BBF55;
+}
+.sticker-card[data-rarity="5"] {
+  --card-bg:   var(--rarity-5-tint);
+  --card-glow: #F5C84255;
+}
+
+
+/* ── Base card style ──────────────────────────────────────────────────────── */
+
+.sticker-card {
+  position: relative;
+  border-radius: var(--radius-card);
+  border: 2.5px solid var(--color-brown);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: default;
+  /* Transition for dupe flash */
+  transition: background-color var(--dur-dupe) ease;
+}
+
+
+/* ── Uncollected state ────────────────────────────────────────────────────── */
+
+.sticker-card:not(.collected) {
+  background: #D8CDB8;
+  filter: grayscale(0.5) opacity(0.7);
+}
+
+.sticker-card:not(.collected) .card-badge {
+  display: none;
+}
+
+
+/* ── Collected state ──────────────────────────────────────────────────────── */
+
+.sticker-card.collected {
+  filter: none;
+  /* Shimmer gradient layered over rarity tint */
+  background:
+    linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.38) 50%,
+      transparent 70%
+    ),
+    var(--card-bg, #E6E6E6);
+  background-size: 300% 300%, auto;
+  background-position: 0% 0%, 0 0;
+  /* Persistent rarity glow */
+  box-shadow: 0 0 10px 3px var(--card-glow);
+  /* Shimmer sweep — play state controlled by ui.js */
+  animation: card-shimmer 3s linear infinite;
+  animation-play-state: var(--shimmer-state);
+}
+
+
+/* ── Duplicate flash ──────────────────────────────────────────────────────── */
+/* JS adds .dupe-flash to trigger a background-color transition to gold then back */
+
+.sticker-card.dupe-flash {
+  background-color: var(--color-gold) !important;
+}
+
+
+/* ── Pop-in animation ─────────────────────────────────────────────────────── */
+/* JS adds .pop-in class when a card transitions 0→1 (new collection event) */
+
+.sticker-card.pop-in {
+  animation:
+    card-pop-in var(--dur-pop) cubic-bezier(0.34, 1.56, 0.64, 1) both,
+    card-shimmer 3s linear infinite var(--dur-pop);  /* restart shimmer after pop */
+  animation-play-state: running, var(--shimmer-state);
+}
+
+
+/* ── Card label (? for uncollected, ID for collected) ─────────────────────── */
+
+.card-label {
+  font-family: 'Fredoka One', serif;
+  font-size: clamp(0.6rem, 1vw, 1rem);
+  color: var(--color-brown);
+  z-index: 1;
+  position: relative;
+  user-select: none;
+  line-height: 1;
+}
+
+.sticker-card:not(.collected) .card-label {
+  font-size: clamp(0.9rem, 1.5vw, 1.4rem);
+  opacity: 0.6;
+}
+
+
+/* ── Star badge (corner) ──────────────────────────────────────────────────── */
+
+.card-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-family: 'Fredoka One', serif;
+  font-size: clamp(0.5rem, 0.7vw, 0.72rem);
+  line-height: 1;
+  color: var(--color-brown);
+  background: rgba(255,255,255,0.7);
+  border-radius: 3px;
+  padding: 1px 2px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.sticker-card[data-rarity="5"] .card-badge {
+  background: rgba(245, 200, 66, 0.8);
+}
+
+
+/* =============================================================================
+   10. KEYFRAME ANIMATIONS
+   ============================================================================= */
+
+/* ── Card pop-in: spring scale ──────────────────────────────────────────────── */
+
+@keyframes card-pop-in {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+
+/* ── Shimmer sweep: diagonal background-position ────────────────────────────── */
+
+@keyframes card-shimmer {
+  0%   { background-position: 0% 0%,   0 0; }
+  100% { background-position: 200% 200%, 0 0; }
+}
+
+
+/* ── Duplicate flash: handled via CSS transition + class, not keyframes
+   (transition on background-color; .dupe-flash sets it to gold)
+   See .sticker-card { transition: background-color ... } above.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+
+/* ── Event log entry slide-in ──────────────────────────────────────────────── */
+
+@keyframes log-slide-in {
+  from {
+    transform: translateY(80%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+
+/* ── Auto-play pulse: amber box-shadow on active button group ─────────────── */
+
+@keyframes auto-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(245, 200, 66, 0.60); }
+  50%  { box-shadow: 0 0 0 8px rgba(245, 200, 66, 0.00); }
+  100% { box-shadow: 0 0 0 0   rgba(245, 200, 66, 0.60); }
+}
+
+
+/* ── Progress bar fill transition is via CSS transition (not keyframes) ───── */
+
+
+/* =============================================================================
+   11. BOTTOM STATS SECTION — scrollable, below 100svh
+   ============================================================================= */
+
+#stats-section {
+  width: 100%;
+  padding: 16px 12px 32px;
+  background-color: #EDE0C4;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+
+/* ── Layer headers ────────────────────────────────────────────────────────── */
+
+.layer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.layer-title {
+  font-family: 'Fredoka One', serif;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  color: var(--color-brown);
+  border-bottom: 2.5px solid var(--color-brown);
+  padding-bottom: 4px;
+  flex: 1;
+}
+
+#btn-clear-history {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  background: var(--color-red);
+  color: #fff;
+  border-color: #8B2820;
+  border-radius: 5px;
+  margin-left: 12px;
+}
+
+#btn-clear-history:hover:not(:disabled) {
+  background: #A02D22;
+}
+
+
+/* ── Stats subsection containers ─────────────────────────────────────────── */
+
+.stats-subsection {
+  background: var(--color-cream);
+  border-radius: var(--radius-card);
+  border: var(--border-panel);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-subsection::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  filter: url(#grain);
+  opacity: 0.07;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.stats-subsection > * {
+  position: relative;
+  z-index: 1;
+}
+
+.subsection-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-brown);
+  margin-bottom: 10px;
+  border-bottom: 1.5px solid rgba(107, 68, 35, 0.2);
+  padding-bottom: 4px;
+}
+
+.subsection-hint {
+  font-size: 0.78rem;
+  color: #8B6040;
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+
+/* ── Season History layer ─────────────────────────────────────────────────── */
+
+#season-history-layer {
+  background: var(--color-cream);
+  border-radius: var(--radius-card);
+  border: var(--border-panel);
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+#season-history-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  filter: url(#grain);
+  opacity: 0.07;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+#season-history-layer > * { position: relative; z-index: 1; }
+
+
+/* ── Current Season layer ─────────────────────────────────────────────────── */
+
+#current-season-layer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#current-season-layer > .layer-title {
+  display: block;
+  border-bottom-width: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+
+/* ── Season Outcome Chart ─────────────────────────────────────────────────── */
+
+.chart-container {
+  width: 100%;
+  position: relative;
+}
+
+#season-outcome-chart-container {
+  height: clamp(220px, 30vh, 380px);
+  margin-top: 8px;
+}
+
+#season-outcome-chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+
+/* ── Strategy Averages block ──────────────────────────────────────────────── */
+
+.averages-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.averages-card {
+  flex: 1;
+  min-width: 160px;
+  max-width: 220px;
+  background: rgba(255,255,255,0.6);
+  border: 2px solid var(--color-brown);
+  border-left-width: 5px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  color: var(--color-brown);
+}
+
+.averages-card-title {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.averages-card-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  line-height: 1.6;
+}
+
+/* Preset-specific border-left accents */
+.averages-card[data-preset="spend-greedily"]  { border-left-color: var(--color-green); }
+.averages-card[data-preset="5star-only"]      { border-left-color: var(--color-gold); }
+.averages-card[data-preset="hoard-then-spend"]{ border-left-color: var(--color-sky); }
+.averages-card[data-preset="end-season-blitz"]{ border-left-color: var(--color-orange); }
+.averages-card[data-preset="never-spend"]     { border-left-color: #9E9E9E; }
+.averages-card[data-preset="custom"]          { border-left-color: var(--color-brown); }
+
+
+/* ── Tables (Season History + Strategy Comparison) ────────────────────────── */
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1.5px solid rgba(107, 68, 35, 0.25);
+  margin-top: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  color: var(--color-brown);
+}
+
+thead {
+  background: rgba(107, 68, 35, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+th {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 2px solid rgba(107, 68, 35, 0.25);
+  white-space: nowrap;
+}
+
+td {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(107, 68, 35, 0.1);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(253, 246, 227, 0.6);
+}
+
+tbody tr:hover {
+  background: rgba(245, 200, 66, 0.1);
+}
+
+/* Best row highlight in strategy comparison */
+.row-best {
+  background: rgba(125, 170, 114, 0.22) !important;
+  font-weight: 700;
+}
+
+.row-best td {
+  color: #2E6B25;
+}
+
+/* Season history: color-coded left border by preset */
+#season-history-tbody tr[data-preset="spend-greedily"]    { border-left: 4px solid var(--color-green); }
+#season-history-tbody tr[data-preset="5star-only"]        { border-left: 4px solid var(--color-gold); }
+#season-history-tbody tr[data-preset="hoard-then-spend"]  { border-left: 4px solid var(--color-sky); }
+#season-history-tbody tr[data-preset="end-season-blitz"]  { border-left: 4px solid var(--color-orange); }
+#season-history-tbody tr[data-preset="never-spend"]       { border-left: 4px solid #9E9E9E; }
+#season-history-tbody tr[data-preset="custom"]            { border-left: 4px solid var(--color-brown); }
+
+/* Done column: ✓ green / missing red */
+.done-yes { color: var(--color-green); font-weight: 700; }
+.done-no  { color: var(--color-red);   font-weight: 700; }
+
+/* Inline progress bar in table rows */
+.inline-bar-track {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  background: rgba(107, 68, 35, 0.12);
+  border-radius: 3px;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+.inline-bar-fill {
+  height: 100%;
+  background: var(--color-green);
+  border-radius: 3px;
+}
+
+/* Row annotation (one-sentence explanation below each row) */
+.row-annotation td {
+  font-size: 0.72rem;
+  color: #8B6040;
+  font-style: italic;
+  padding-top: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid rgba(107, 68, 35, 0.15);
+}
+
+
+/* ── Stat cards grid (Season Summary) ────────────────────────────────────── */
+
+.stat-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1.5px solid rgba(107, 68, 35, 0.25);
+  border-radius: 7px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stat-card-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.7rem;
+  color: #8B6040;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+.stat-card-value {
+  font-family: 'Fredoka One', serif;
+  font-size: 1.2rem;
+  color: var(--color-brown);
+  line-height: 1;
+}
+
+/* Season result banner */
+.stat-card.season-complete {
+  background: rgba(125, 170, 114, 0.2);
+  border-color: var(--color-green);
+}
+
+.stat-card.season-complete .stat-card-value {
+  color: #2E6B25;
+}
+
+.stat-card.season-incomplete {
+  background: rgba(192, 57, 43, 0.1);
+  border-color: var(--color-red);
+}
+
+.stat-card.season-incomplete .stat-card-value {
+  color: var(--color-red);
+}
+
+
+/* ── Daily Timeline ───────────────────────────────────────────────────────── */
+
+.timeline-scroll-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  border-radius: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brown) transparent;
+}
+
+.timeline-track {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  min-width: max-content;
+  padding: 4px 2px;
+}
+
+.day-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 52px;
+  padding: 6px 4px;
+  border: 1.5px solid rgba(107, 68, 35, 0.2);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.65rem;
+  color: var(--color-brown);
+}
+
+/* Vault start day gets amber top accent */
+.day-column[data-vault-start="true"] {
+  border-top: 3px solid var(--color-gold);
+  background: rgba(245, 200, 66, 0.08);
+}
+
+/* Days where star balance after = 0 get a pale red background */
+.day-column[data-zero-stars="true"] {
+  background: rgba(192, 57, 43, 0.07);
+}
+
+.day-col-number {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.75rem;
+  color: var(--color-brown);
+  font-weight: 400;
+}
+
+.day-col-login {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.7rem;
+  color: var(--color-sky);
+}
+
+.day-col-challenge { color: var(--color-green); }
+.day-col-vault     { color: var(--color-purple); }
+.day-col-uniques   { color: var(--color-green); font-weight: 700; }
+.day-col-stars-earned { color: var(--color-gold); }
+.day-col-stars-spent  { color: var(--color-red); }
+
+
+/* ── Cumulative Progress Chart ────────────────────────────────────────────── */
+
+#cumulative-chart-container {
+  height: clamp(180px, 26vh, 320px);
+}
+
+#chart-cumulative {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+
+/* ── Pack Yield Breakdown ─────────────────────────────────────────────────── */
+
+.yield-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(107, 68, 35, 0.25);
+  font-family: 'Fredoka One', serif;
+}
+
+.legend-item[data-rarity="1"] { background: var(--rarity-1-tint); color: var(--color-brown); }
+.legend-item[data-rarity="2"] { background: var(--rarity-2-tint); color: var(--color-brown); }
+.legend-item[data-rarity="3"] { background: var(--rarity-3-tint); color: var(--color-brown); }
+.legend-item[data-rarity="4"] { background: var(--rarity-4-tint); color: var(--color-brown); }
+.legend-item[data-rarity="5"] { background: var(--rarity-5-tint); color: var(--color-brown); }
+
+#pack-yield-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.yield-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.yield-row-label {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.82rem;
+  color: var(--color-brown);
+}
+
+.yield-bar-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.yield-bar-track {
+  height: 16px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  background: rgba(107, 68, 35, 0.08);
+  border: 1px solid rgba(107, 68, 35, 0.15);
+  position: relative;
+}
+
+.yield-bar-segment {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  color: var(--color-brown);
+  font-family: 'Fredoka One', serif;
+  min-width: 4px;
+  overflow: hidden;
+}
+
+.yield-bar-segment[data-rarity="1"] { background: var(--rarity-1-color); opacity: 0.8; }
+.yield-bar-segment[data-rarity="2"] { background: var(--rarity-2-color); opacity: 0.8; }
+.yield-bar-segment[data-rarity="3"] { background: var(--rarity-3-color); opacity: 0.8; }
+.yield-bar-segment[data-rarity="4"] { background: var(--rarity-4-color); opacity: 0.8; }
+.yield-bar-segment[data-rarity="5"] { background: var(--rarity-5-color); opacity: 0.8; }
+
+.yield-bar-sublabel {
+  font-size: 0.65rem;
+  color: #8B6040;
+  font-style: italic;
+}
+
+
+/* ── Rarity Heatmap ───────────────────────────────────────────────────────── */
+
+#heatmap-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.heatmap-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.heatmap-row-label {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.78rem;
+  color: var(--color-brown);
+  width: 24px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.heatmap-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  flex: 1;
+}
+
+.heatmap-cell {
+  width: clamp(14px, 1.8vw, 22px);
+  height: clamp(14px, 1.8vw, 22px);
+  border-radius: 3px;
+  border: 1px solid rgba(107, 68, 35, 0.2);
+  background: #BDBDBD;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    transform        80ms ease;
+  position: relative;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.15);
+  z-index: 2;
+}
+
+/* Rarity-tinted collected heatmap cells (opacity set inline by stats.js via opacity on the element) */
+.heatmap-cell[data-rarity="1"].collected { background: var(--rarity-1-color); }
+.heatmap-cell[data-rarity="2"].collected { background: var(--rarity-2-color); }
+.heatmap-cell[data-rarity="3"].collected { background: var(--rarity-3-color); }
+.heatmap-cell[data-rarity="4"].collected { background: var(--rarity-4-color); }
+.heatmap-cell[data-rarity="5"].collected { background: var(--rarity-5-color); }
+
+/* Heatmap tooltip (positioned by JS) */
+.heatmap-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  background: var(--color-brown);
+  color: var(--color-cream);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  padding: 5px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  line-height: 1.5;
+}
+
+
+/* ── Star Economy Waterfall ───────────────────────────────────────────────── */
+
+#star-waterfall-chart-container {
+  height: clamp(200px, 28vh, 360px);
+  margin-top: 8px;
+}
+
+#chart-star-waterfall {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#waterfall-summary {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-brown);
+  margin-bottom: 6px;
+}
+
+
+/* ── Strategy Comparison ──────────────────────────────────────────────────── */
+
+#comparison-table {
+  min-width: 560px;
+}
+
+#comparison-table th:first-child,
+#comparison-table td:first-child {
+  min-width: 140px;
+}
+
+
+/* =============================================================================
+   12. TOOLTIP BASE
+   ============================================================================= */
+
+.tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1001;
+  background: var(--color-brown);
+  color: var(--color-cream);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  padding: 6px 10px;
+  border-radius: 5px;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+}
+
+
+/* =============================================================================
+   13. UTILITY CLASSES
+   ============================================================================= */
+
+.text-green  { color: var(--color-green); }
+.text-red    { color: var(--color-red); }
+.text-gold   { color: var(--color-gold); }
+.text-brown  { color: var(--color-brown); }
+.text-sky    { color: var(--color-sky); }
+.text-purple { color: var(--color-purple); }
+.text-orange { color: var(--color-orange); }
+
+.fw-bold  { font-weight: 700; }
+.font-fredoka { font-family: 'Fredoka One', serif; }
+
+[hidden] { display: none !important; }
+
+
+/* =============================================================================
+   14. SCROLLBAR STYLING — stats section
+   ============================================================================= */
+
+#stats-section,
+.timeline-scroll-wrapper,
+.table-wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brown) rgba(107, 68, 35, 0.1);
+}
+
+#stats-section::-webkit-scrollbar,
+.timeline-scroll-wrapper::-webkit-scrollbar,
+.table-wrapper::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+#stats-section::-webkit-scrollbar-thumb,
+.timeline-scroll-wrapper::-webkit-scrollbar-thumb,
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--color-brown);
+  border-radius: 3px;
+}
+
+#stats-section::-webkit-scrollbar-track,
+.timeline-scroll-wrapper::-webkit-scrollbar-track,
+.table-wrapper::-webkit-scrollbar-track {
+  background: rgba(107, 68, 35, 0.1);
+}
+
+
+/* =============================================================================
+   15. FOCUS-VISIBLE ACCESSIBILITY
+   ============================================================================= */
+
+:focus-visible {
+  outline: 2.5px solid var(--color-sky);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2.5px solid var(--color-sky);
+  outline-offset: 2px;
+}
+
+.heatmap-cell:focus-visible {
+  outline: 2px solid var(--color-sky);
+  outline-offset: 1px;
+  transform: scale(1.15);
+}
