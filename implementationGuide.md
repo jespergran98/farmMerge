@@ -20,9 +20,9 @@ No build step. No bundler. No frameworks. Plain ES modules (`type="module"`). Go
 
 **Module contracts:**
 
-- `engine.js` exports: `SimulatorEngine`, `seasonHistory` (mutable array), `clearSeasonHistory()`
-- `ui.js` imports `SimulatorEngine` and `seasonHistory` from `engine.js`; imports `renderStats` from `stats.js`. It is the only module that touches the DOM directly during simulation.
-- `stats.js` imports nothing from `engine.js` directly — it receives a `SeasonResult` and the full `seasonHistory[]` array as function arguments. Exports: `renderStats(seasonResult, seasonHistory, vaultConfig)`
+- `engine.js` exports: `SimulatorEngine`, `seasonHistory` (mutable array), `clearSeasonHistory()`, `currentSeasonComparison` (mutable, set to `null` before first season, updated after every completed season)
+- `ui.js` imports `SimulatorEngine`, `seasonHistory`, and `currentSeasonComparison` from `engine.js`; imports `renderStats` from `stats.js`. It is the only module that touches the DOM directly during simulation.
+- `stats.js` imports nothing from `engine.js` directly — it receives a `SeasonResult`, the full `seasonHistory[]` array, the `VaultConfig`, and the `currentSeasonComparison` object as function arguments. Exports: `renderStats(seasonResult, seasonHistory, vaultConfig, currentSeasonComparison)`
 - `index.html` loads only `ui.js` as the entry point (`<script type="module" src="ui.js">`)
 
 No circular imports. `stats.js` is a pure renderer — it reads data, writes DOM, does nothing else.
@@ -63,7 +63,7 @@ class SimulatorEngine {
 ```js
 {
   day: number,
-  loginPackTier: number,
+  loginPack: PackResult,          // full draw data for the login pack; tier accessible via loginPack.tier
   challengePacks: PackResult[],
   vaultPurchases: VaultPurchase[],
   newUniques: StickerID[],
@@ -74,6 +74,8 @@ class SimulatorEngine {
   starBalanceAfter: number,
 }
 ```
+
+> **Why `loginPack: PackResult` and not `loginPackTier: number`:** `challengePacks` exposes full `PackResult` objects so `stats.js` can compute per-tier rarity distributions for the Pack Yield Breakdown. The login pack must be consistent — a bare tier number cannot reconstruct which sticker rarities were actually drawn, because `newUniques` carries no source tag and cannot be split between login and challenge origins.
 
 **`SeasonResult`** — returned by `runAll()`
 ```js
@@ -107,12 +109,12 @@ class SimulatorEngine {
 {
   seasonIndex: number,            // 1, 2, 3, …
   seed: number,
-  presetLabel: string,            // "Spend Greedily" | "5★ Only" | … | "Custom"
+  presetLabel: string,            // "Spend Greedily" | "5★ Only" | "Hoard Then Spend" | "End-Season Blitz" | "Never Spend" | "Custom"
   vaultConfigSnapshot: VaultConfig,
   challengeSetting: string,
   finalUniqueCount: number,
   finalStars: number,
-  starsSpentTotal: number,        // = tier3 + tier4 + tier5 from vaultPurchasesByTier costs
+  starsSpentTotal: number,        // = starsSpentByTier.tier3 + starsSpentByTier.tier4 + starsSpentByTier.tier5 (i.e. the sum of star amounts, not purchase counts)
   vaultPurchasesByTier: { tier3: number, tier4: number, tier5: number },
   firstFiveStarDay: number | null,
   completed: boolean,             // true if finalUniqueCount === 108
@@ -135,11 +137,15 @@ class SimulatorEngine {
 {
   tier: number,                   // 3, 4, or 5
   cost: number,                   // stars deducted (250 / 500 / 800)
-  guaranteedNew: StickerID,       // the forced-unique sticker drawn
-  remainder: PackResult,          // remainder slots (treated as normal pack odds)
+  guaranteedNew: StickerID,       // the forced-unique sticker drawn (always a new unique — never a PackResult)
+  remainderStickers: StickerID[], // the additional-slot draws only (same count as a normal pack's additional slots)
+  remainderNewUniques: StickerID[],
+  remainderDuplicates: { id: StickerID, starsAwarded: number }[],
   starsBalanceAfter: number,      // star balance immediately after this purchase
 }
 ```
+
+> **Why not `PackResult` here:** `PackResult` contains a `guaranteed: StickerID` field drawn from *all* stickers of that rarity, which directly conflicts with the vault rule that the guaranteed slot must draw from *uncollected stickers only* and never award duplicate stars. Storing only the remainder slots avoids this ambiguity.
 
 **`VaultConfig`** — the full vault strategy configuration
 ```js
@@ -158,12 +164,14 @@ class SimulatorEngine {
 {
   day: number,
   type: 'login' | 'challenge' | 'vault',
-  packTier: number,               // star rating of the pack (1–5)
+  packTier: number,               // star rating of this specific pack (1–5); one EventEntry is created per pack opened
   stickers: { id: StickerID, rarity: number, isNew: boolean }[],
-  starsAwarded: number,           // duplicate stars earned from this event
+  starsAwarded: number,           // duplicate stars earned from this pack
   starsSpent: number,             // vault purchase cost (0 for non-vault events)
 }
 ```
+
+> **One `EventEntry` per pack, not per day.** A full-challenge day produces up to 10 individual entries (one per pack opened). `ui.js` is responsible for collapsing same-day same-tier challenge entries into a single display line in the event log (e.g. `4×2★: ★2 ★1 ★2 ★2 ★1 ★1`). `engine.js` always emits one entry per pack and never aggregates.
 
 `seasonHistory` is a module-level array in `engine.js`. It is appended to after every season completes — whether triggered by `runAll()` or by the final `runDay()` call. It is never cleared except by an explicit "Clear History" button or a full page reload.
 
@@ -596,7 +604,7 @@ A horizontally scrollable strip of exactly 50 day columns.
 
 Each column:
 - Day number
-- Login pack tier (star icon)
+- Login pack tier (star icon) — read from `loginPack.tier`
 - Challenge packs opened (e.g. `4×2★`)
 - Vault purchases (e.g. `2×5★`)
 - Net new unique stickers that day — shown in green if > 0
@@ -782,11 +790,25 @@ Card pop-in: `transform: scale(1.0)` → `scale(1.3)` → `scale(1.0)` using `cu
 
 Duplicate flash: `background-color` transitions to `var(--color-gold)` then back. Duration: `calc(var(--anim-dur) * 0.5)`. Applied via a CSS transition on the card's `background-color` property — JS adds/removes a `.dupe-flash` class to trigger it.
 
-Star counter: digit-slot roll — each digit rendered in a vertically clipped container; digits slide upward (`translateY` decreasing) on increase, downward on decrease. Duration: `var(--anim-dur)`.
+Star counter: digit-slot roll — each digit rendered in a vertically clipped container; digits slide upward (`translateY` decreasing) on increase, downward on decrease. Duration: `calc(var(--anim-dur) * 0.8)` (= `currentDelay × 0.4`, capped at 400 ms).
+
+Progress bar fill: Duration: `calc(var(--anim-dur) * 0.6)` (= `currentDelay × 0.3`, capped at 300 ms).
+
+Event log entry slide-in: Duration: `calc(var(--anim-dur) * 0.4)` (= `currentDelay × 0.2`, capped at 200 ms).
+
+All five CSS duration expressions, derived from the single `--anim-dur` variable (= `min(currentDelay × 0.5, 500ms)`):
+
+| Animation | CSS expression | Resolves to |
+|-----------|---------------|-------------|
+| Card pop-in | `var(--anim-dur)` | `min(delay × 0.5, 500ms)` |
+| Duplicate flash | `calc(var(--anim-dur) * 0.5)` | `min(delay × 0.25, 250ms)` |
+| Star counter roll | `calc(var(--anim-dur) * 0.8)` | `min(delay × 0.4, 400ms)` |
+| Progress bar fill | `calc(var(--anim-dur) * 0.6)` | `min(delay × 0.3, 300ms)` |
+| Event log slide-in | `calc(var(--anim-dur) * 0.4)` | `min(delay × 0.2, 200ms)` |
 
 `ui.js` updates `--anim-dur` on the `:root` element whenever speed changes:
 ```js
-document.documentElement.style.setProperty('--anim-dur', `${currentDelay * 0.5}ms`);
+document.documentElement.style.setProperty('--anim-dur', `${Math.min(currentDelay * 0.5, 500)}ms`);
 // At Max speed:
 document.documentElement.style.setProperty('--anim-dur', '0ms');
 ```
