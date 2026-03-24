@@ -5,15 +5,14 @@
  * The ONLY module that touches the DOM directly during simulation.
  *
  * Imports  : SimulatorEngine, seasonHistory, clearSeasonHistory,
- *            currentSeasonComparison, PRESETS, rarityOf  from ./engine.js
- *            renderStats                                  from ./stats.js
+ *            PRESETS, rarityOf  from ./engine.js
+ *            renderStats        from ./stats.js
  */
 
 import {
   SimulatorEngine,
   seasonHistory,
   clearSeasonHistory,
-  currentSeasonComparison,   // live ES-module binding — auto-updates when engine writes it
   PRESETS,
   rarityOf,
 } from './engine.js';
@@ -668,7 +667,7 @@ function handleSeasonComplete() {
   const lastResult = engine._lastSeasonResult;
   if (!lastResult) return; // defensive
 
-  renderStats(lastResult, seasonHistory, readVaultConfig(), currentSeasonComparison);
+  renderStats(lastResult, seasonHistory, readVaultConfig());
 
   if (isAutoPlay) {
     startNextAutoSeason();
@@ -681,7 +680,9 @@ function handleSeasonComplete() {
  * Auto-play seeding rule: season N uses seed `baseSeed + (N − 1)`.
  */
 async function startNextAutoSeason() {
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // At max speed there is no inter-round pause; at other speeds give the user
+  // a moment to see the final state before the next season begins.
+  await new Promise(resolve => setTimeout(resolve, currentSpeed === 'max' ? 0 : 1000));
 
   if (!isAutoPlay) return; // user cancelled during the pause
 
@@ -870,7 +871,6 @@ document.addEventListener('click', e => {
       engine._lastSeasonResult,
       seasonHistory,
       readVaultConfig(),
-      currentSeasonComparison,
     );
   }
 });

@@ -5,7 +5,7 @@
  * Imports nothing from engine.js directly.
  *
  * Exports:
- *   renderStats(seasonResult, seasonHistory, vaultConfig, currentSeasonComparison)
+ *   renderStats(seasonResult, seasonHistory, vaultConfig)
  */
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -56,22 +56,9 @@ const PRESET_ORDER = [
   'Never Spend',
 ];
 
-const PRESET_ANNOTATIONS = {
-  'Spend Greedily':
-    'Buying packs the instant you can afford them maximises total pack count but spends stars on lower tiers that could have been saved for 5★ packs.',
-  '5★ Only':
-    'Holding stars for the best packs pays off only if enough stars accumulate — check whether this seed reached 800★ in time.',
-  'Hoard Then Spend':
-    'A mid-season inflection — the progress chart will show a visible acceleration after Day 26.',
-  'End-Season Blitz':
-    'Stars are used most efficiently here but there is no time to benefit from newly collected stickers feeding more runs.',
-  'Never Spend':
-    'The pure free-to-play floor — every other strategy should beat this or the star vault offers no real value.',
-  'Custom':
-    'Your custom configuration — compare against the presets to judge whether your settings are working as intended.',
-  'Your Config':
-    'Your custom configuration — compare against the presets to judge whether your settings are working as intended.',
-};
+/** Season Log pagination — max rows per page and current page index (0-based). */
+const HISTORY_PAGE_SIZE = 20;
+let _historyCurrentPage = 0;
 
 /**
  * Expected sticker distribution per pack type (guaranteed + probability-weighted additionals).
@@ -143,12 +130,11 @@ function presetColorVar(label) {
 /**
  * Re-render the entire #stats-section with the most recent season data.
  *
- * @param {SeasonResult}             seasonResult
- * @param {SeasonRecord[]}           seasonHistory
- * @param {VaultConfig}              vaultConfig
- * @param {CurrentSeasonComparison|null} currentSeasonComparison
+ * @param {SeasonResult}   seasonResult
+ * @param {SeasonRecord[]} seasonHistory
+ * @param {VaultConfig}    vaultConfig
  */
-export function renderStats(seasonResult, seasonHistory, vaultConfig, currentSeasonComparison) {
+export function renderStats(seasonResult, seasonHistory, vaultConfig) {
   const historyLayer  = document.getElementById('season-history-layer');
   const currentLayer  = document.getElementById('current-season-layer');
 
@@ -163,7 +149,7 @@ export function renderStats(seasonResult, seasonHistory, vaultConfig, currentSea
   }
 
   if (currentLayer) {
-    renderCurrentSeason(currentLayer, seasonResult, vaultConfig, currentSeasonComparison);
+    renderCurrentSeason(currentLayer, seasonResult, vaultConfig);
     // Un-hide once a season has completed
     if (seasonResult) {
       currentLayer.removeAttribute('hidden');
@@ -179,7 +165,10 @@ export function renderStats(seasonResult, seasonHistory, vaultConfig, currentSea
 
 function renderSeasonHistory(container, history) {
   container.innerHTML = '';
-  if (!history || history.length === 0) return;
+  if (!history || history.length === 0) {
+    _historyCurrentPage = 0;
+    return;
+  }
 
   // Header row with Clear History button
   const headerRow = el('div', { className: 'history-header-row' },
@@ -390,58 +379,242 @@ function buildOutcomeChart(history) {
 
 function buildHistoryTable(history) {
   const section = el('div', { className: 'history-table-wrapper stats-subsection' });
-  section.appendChild(el('h3', { className: 'subsection-title' }, 'Season Log'));
 
+  const sorted     = [...history].reverse(); // newest first
+  const totalPages = Math.ceil(sorted.length / HISTORY_PAGE_SIZE);
+
+  // Clamp current page (guards against history shrinking after clear-history)
+  _historyCurrentPage = Math.max(0, Math.min(_historyCurrentPage, totalPages - 1));
+
+  const pageStart   = _historyCurrentPage * HISTORY_PAGE_SIZE;
+  const pageEnd     = Math.min(pageStart + HISTORY_PAGE_SIZE, sorted.length);
+  const pageRecords = sorted.slice(pageStart, pageEnd);
+  const bestUnique  = Math.max(...sorted.map(r => r.finalUniqueCount));
+
+  // ── Section header ──────────────────────────────────────────────────────
+  section.appendChild(
+    el('div', { className: 'history-log-header' },
+      el('h3', { className: 'subsection-title' }, 'Season Log'),
+      el('span', { className: 'history-log-count' },
+        `${sorted.length} season${sorted.length !== 1 ? 's' : ''}`),
+    ),
+  );
+
+  // ── Table ───────────────────────────────────────────────────────────────
   const tableWrap = el('div', { className: 'table-wrapper' });
-  const table     = el('table', { className: 'history-table',
-    'aria-label': 'Completed season records, newest first' });
+  const table = el('table', {
+    className: 'history-table',
+    'aria-label': 'Completed season records, newest first',
+  });
 
-  const thead = el('thead');
-  thead.appendChild(el('tr', {},
-    el('th', { scope: 'col' }, '#'),
-    el('th', { scope: 'col' }, 'Seed'),
-    el('th', { scope: 'col' }, 'Preset'),
-    el('th', { scope: 'col' }, 'Stickers'),
-    el('th', { scope: 'col' }, 'Stars spent'),
-    el('th', { scope: 'col' }, 'Vault (3★/4★/5★)'),
-    el('th', { scope: 'col' }, 'Stars left'),
-    el('th', { scope: 'col' }, 'Done?'),
+  table.appendChild(el('thead', {},
+    el('tr', {},
+      el('th', { scope: 'col', className: 'col-season'   }, '#'),
+      el('th', { scope: 'col', className: 'col-preset'   }, 'Preset'),
+      el('th', { scope: 'col', className: 'col-stickers' }, 'Stickers'),
+      el('th', { scope: 'col', className: 'col-stars'    }, 'Stars'),
+      el('th', { scope: 'col', className: 'col-vault'    }, 'Vault'),
+      el('th', { scope: 'col', className: 'col-result'   }, 'Result'),
+    ),
   ));
-  table.appendChild(thead);
 
   const tbody = el('tbody');
-  const sorted = [...history].reverse();
-  sorted.forEach(record => {
-    const color = presetColorVar(record.presetLabel);
-    const row   = el('tr', { className: 'history-row',
-      style: { borderLeft: `4px solid ${resolveColor(color)}` } });
 
-    const doneCell = record.completed
-      ? el('td', { style: { color: '#7DAA72', fontWeight: '700' } }, '✓')
-      : el('td', { style: { color: '#C0392B' } }, `−${108 - record.finalUniqueCount}`);
+  pageRecords.forEach(record => {
+    const colorVar   = presetColorVar(record.presetLabel);
+    const color      = resolveColor(colorVar);
+    const isBest     = record.finalUniqueCount === bestUnique && sorted.length > 1;
+    const isComplete = record.completed;
+    const pctNum     = (record.finalUniqueCount / 108 * 100).toFixed(1);
+    const missing    = 108 - record.finalUniqueCount;
 
-    const vp = record.vaultPurchasesByTier;
-    const vpText = `${vp.tier3}×3★ / ${vp.tier4}×4★ / ${vp.tier5}×5★`;
+    const row = el('tr', {
+      className: 'history-row' +
+        (isBest     ? ' history-row--best'     : '') +
+        (isComplete ? ' history-row--complete' : ''),
+    });
 
-    row.append(
-      el('td', {}, String(record.seasonIndex)),
-      el('td', { style: { fontFamily: 'monospace', fontSize: '11px' } }, String(record.seed)),
-      el('td', { className: 'preset-cell',
-        style: { borderLeft: `3px solid ${resolveColor(color)}`, paddingLeft: '8px' } },
-        record.presetLabel),
-      el('td', { className: 'num-cell' }, `${record.finalUniqueCount} / 108`),
-      el('td', { className: 'num-cell' }, `${fmt(record.starsSpentTotal)}★`),
-      el('td', { className: 'num-cell', style: { fontSize: '11px' } }, vpText),
-      el('td', { className: 'num-cell' }, `${fmt(record.finalStars)}★`),
-      doneCell,
+    // ── # ───────────────────────────────────────────────────────────────
+    const seasonTd = el('td', { className: 'history-cell history-cell--season' });
+    seasonTd.appendChild(el('span', { className: 'season-num' }, `#${record.seasonIndex}`));
+    if (isBest) {
+      seasonTd.appendChild(el('span', { className: 'best-badge' }, '★ Best'));
+    }
+    row.appendChild(seasonTd);
+
+    // ── Preset + Seed ────────────────────────────────────────────────────
+    const presetTd = el('td', { className: 'history-cell history-cell--preset' });
+    const pill = el('span', {
+      className: 'preset-pill',
+      style: { background: hexWithAlpha(color, 0.14), borderColor: color, color },
+    }, record.presetLabel);
+    presetTd.appendChild(pill);
+    presetTd.appendChild(el('div', { className: 'history-seed' }, `🌱 ${record.seed}`));
+    row.appendChild(presetTd);
+
+    // ── Stickers + mini bar ──────────────────────────────────────────────
+    const stickerTd = el('td', { className: 'history-cell history-cell--stickers' });
+    stickerTd.appendChild(
+      el('div', { className: 'sticker-count-row' },
+        el('span', { className: 'sticker-count' }, String(record.finalUniqueCount)),
+        el('span', { className: 'sticker-of' }, '/ 108'),
+        el('span', { className: 'sticker-pct' }, `${pctNum}%`),
+      ),
     );
+    const barTrack = el('div', { className: 'history-bar-track' });
+    barTrack.appendChild(el('div', {
+      className: 'history-bar-fill',
+      style: { width: pctNum + '%', background: isComplete ? '#7DAA72' : color },
+    }));
+    stickerTd.appendChild(barTrack);
+    row.appendChild(stickerTd);
+
+    // ── Stars ─────────────────────────────────────────────────────────────
+    const starsTd = el('td', { className: 'history-cell history-cell--stars' });
+    starsTd.appendChild(
+      el('div', { className: 'stars-row stars-row--spent' },
+        el('span', { className: 'stars-sign stars-sign--spent' }, '−'),
+        el('span', {}, `${fmt(record.starsSpentTotal)}★`),
+      ),
+    );
+    starsTd.appendChild(
+      el('div', { className: 'stars-row stars-row--left' },
+        el('span', { className: 'stars-sign stars-sign--left' }, '+'),
+        el('span', { className: 'stars-left-val' }, `${fmt(record.finalStars)}★`),
+      ),
+    );
+    row.appendChild(starsTd);
+
+    // ── Vault ─────────────────────────────────────────────────────────────
+    const vaultTd = el('td', { className: 'history-cell history-cell--vault' });
+    const vp = record.vaultPurchasesByTier;
+    let anyVault = false;
+    [3, 4, 5].forEach(tier => {
+      if (vp[`tier${tier}`] > 0) {
+        anyVault = true;
+        vaultTd.appendChild(
+          el('span', { className: `vault-pill vault-pill--${tier}` },
+            `${tier}★×${vp[`tier${tier}`]}`),
+        );
+      }
+    });
+    if (!anyVault) {
+      vaultTd.appendChild(el('span', { className: 'vault-none' }, '—'));
+    }
+    row.appendChild(vaultTd);
+
+    // ── Result ────────────────────────────────────────────────────────────
+    const resultTd = el('td', { className: 'history-cell history-cell--result' });
+    if (isComplete) {
+      resultTd.appendChild(el('span', { className: 'result-complete' }, '✓'));
+    } else {
+      resultTd.appendChild(el('div', { className: 'result-missing' }, `−${missing}`));
+      resultTd.appendChild(el('div', { className: 'result-label' }, 'missing'));
+    }
+    row.appendChild(resultTd);
+
     tbody.appendChild(row);
   });
 
   table.appendChild(tbody);
   tableWrap.appendChild(table);
   section.appendChild(tableWrap);
+
+  // ── Pagination ────────────────────────────────────────────────────────
+  if (totalPages > 1) {
+    section.appendChild(buildHistoryPagination(totalPages, sorted, history));
+  }
+
   return section;
+}
+
+// ── Pagination controls ──────────────────────────────────────────────────
+
+function buildHistoryPagination(totalPages, sorted, history) {
+  const cur  = _historyCurrentPage;
+  const from = cur * HISTORY_PAGE_SIZE + 1;
+  const to   = Math.min((cur + 1) * HISTORY_PAGE_SIZE, sorted.length);
+
+  const nav = el('nav', {
+    className: 'history-pagination',
+    'aria-label': 'Season log page navigation',
+  });
+
+  const prevBtn = el('button', {
+    type: 'button',
+    className: 'page-nav-btn',
+    disabled: cur === 0,
+    'aria-label': 'Previous page',
+  }, '‹');
+  prevBtn.addEventListener('click', () => {
+    _historyCurrentPage = Math.max(0, _historyCurrentPage - 1);
+    const layer = document.getElementById('season-history-layer');
+    if (layer) renderSeasonHistory(layer, history);
+  });
+
+  const nextBtn = el('button', {
+    type: 'button',
+    className: 'page-nav-btn',
+    disabled: cur >= totalPages - 1,
+    'aria-label': 'Next page',
+  }, '›');
+  nextBtn.addEventListener('click', () => {
+    _historyCurrentPage = Math.min(totalPages - 1, _historyCurrentPage + 1);
+    const layer = document.getElementById('season-history-layer');
+    if (layer) renderSeasonHistory(layer, history);
+  });
+
+  const pageButtons = buildPageNumberButtons(cur, totalPages, history);
+  const rangeLabel  = el('span', { className: 'page-range' },
+    `${from}–${to} of ${sorted.length}`);
+
+  nav.append(prevBtn, ...pageButtons, nextBtn, rangeLabel);
+  return nav;
+}
+
+function buildPageNumberButtons(cur, totalPages, history) {
+  const MAX_VISIBLE = 7;
+  const buttons = [];
+
+  // Decide which page indices to show, collapsing with ellipsis when > 7 pages
+  let pagesToShow;
+  if (totalPages <= MAX_VISIBLE) {
+    pagesToShow = Array.from({ length: totalPages }, (_, i) => i);
+  } else {
+    const s = new Set([0, totalPages - 1]);
+    for (let i = Math.max(0, cur - 2); i <= Math.min(totalPages - 1, cur + 2); i++) s.add(i);
+    pagesToShow = [...s].sort((a, b) => a - b);
+  }
+
+  let prev = -1;
+  for (const p of pagesToShow) {
+    if (prev !== -1 && p > prev + 1) {
+      buttons.push(el('span', { className: 'page-ellipsis' }, '…'));
+    }
+    const isActive = p === cur;
+    const btn = el('button', {
+      type: 'button',
+      className: 'page-num-btn' + (isActive ? ' page-num-btn--active' : ''),
+    }, String(p + 1));
+    if (isActive) btn.setAttribute('aria-current', 'page');
+    if (!isActive) {
+      btn.addEventListener('click', () => {
+        _historyCurrentPage = p;
+        const layer = document.getElementById('season-history-layer');
+        if (layer) renderSeasonHistory(layer, history);
+      });
+    }
+    buttons.push(btn);
+    prev = p;
+  }
+
+  return buttons;
+}
+
+/** Append a 2-digit hex alpha suffix to a 6-digit #rrggbb hex colour. */
+function hexWithAlpha(hex, alpha) {
+  if (typeof hex !== 'string' || !hex.startsWith('#') || hex.length < 7) return hex;
+  return hex.slice(0, 7) + Math.round(alpha * 255).toString(16).padStart(2, '0');
 }
 
 // ── Strategy Averages Block ──────────────────────────────────────────────
@@ -504,7 +677,7 @@ function buildAverageCard(label, records) {
 // LAYER 2 — CURRENT SEASON
 // ════════════════════════════════════════════════════════════════════════════
 
-function renderCurrentSeason(container, seasonResult, vaultConfig, comparison) {
+function renderCurrentSeason(container, seasonResult, vaultConfig) {
   if (!seasonResult) { container.innerHTML = ''; return; }
 
   // Ensure the container itself is visible
@@ -512,13 +685,11 @@ function renderCurrentSeason(container, seasonResult, vaultConfig, comparison) {
 
   // Find or create each subsection target by ID
   renderSeasonSummary(document.getElementById('stats-season-summary'),       seasonResult);
-  renderDailyTimeline(document.getElementById('stats-daily-timeline'),       seasonResult, vaultConfig);
   renderProgressChart(document.getElementById('stats-progress-chart'),       seasonResult, vaultConfig);
   renderPackYield(    document.getElementById('stats-pack-yield'),           seasonResult);
   renderRarityHeatmap(document.getElementById('heatmap-grid'),               seasonResult);
   renderWaterfall(    document.getElementById('chart-star-waterfall'),
                       document.getElementById('waterfall-summary'),          seasonResult);
-  renderStrategyComparison(document.getElementById('comparison-tbody'),      seasonResult, comparison);
 }
 
 // ── 1. Season Summary ────────────────────────────────────────────────────
@@ -583,95 +754,7 @@ function renderSeasonSummary(container, r) {
   container.appendChild(grid);
 }
 
-// ── 2. Daily Timeline ────────────────────────────────────────────────────
-
-function renderDailyTimeline(container, r, vaultConfig) {
-  if (!container) return;
-  // Clear only the inner content (not the section title)
-  const existing = container.querySelector('.timeline-scroll-wrap');
-  if (existing) existing.remove();
-
-  const scroll = el('div', { className: 'timeline-scroll-wrap' });
-  const strip  = el('div', { className: 'timeline-strip' });
-
-  const anyTierEnabled = vaultConfig.tiers.t3 || vaultConfig.tiers.t4 || vaultConfig.tiers.t5;
-
-  r.days.forEach(day => {
-    const isVaultStartDay = anyTierEnabled && day.day === vaultConfig.startDay;
-    const isZeroBalance   = day.starBalanceAfter === 0;
-
-    const col = el('div', {
-      className: 'timeline-col' +
-        (isVaultStartDay ? ' vault-start-col' : '') +
-        (isZeroBalance   ? ' zero-balance-col' : ''),
-    });
-
-    // Day number
-    col.appendChild(el('div', { className: 'tl-day-num' }, String(day.day)));
-
-    // Login pack tier
-    const loginTier = day.loginPack.tier;
-    col.appendChild(el('div', { className: 'tl-login',
-      style: { color: RARITY_COLORS[loginTier] }, title: `Login pack: ${loginTier}★` },
-      RARITY_STARS[loginTier]));
-
-    // Challenge packs summary
-    if (day.challengePacks.length > 0) {
-      const tierCounts = {};
-      day.challengePacks.forEach(p => { tierCounts[p.tier] = (tierCounts[p.tier] || 0) + 1; });
-      const parts = Object.entries(tierCounts).sort(([a], [b]) => a - b)
-        .map(([t, cnt]) => `${cnt}×${t}★`);
-      col.appendChild(el('div', { className: 'tl-challenges',
-        style: { fontSize: '9px', color: '#6B4423' } },
-        parts.join(' ')));
-    } else {
-      col.appendChild(el('div', { className: 'tl-challenges' }, ''));
-    }
-
-    // Vault purchases
-    if (day.vaultPurchases.length > 0) {
-      const vtierCounts = {};
-      day.vaultPurchases.forEach(vp => { vtierCounts[vp.tier] = (vtierCounts[vp.tier] || 0) + 1; });
-      const vparts = Object.entries(vtierCounts).sort(([a], [b]) => b - a)
-        .map(([t, cnt]) => `${cnt}×${t}★`);
-      col.appendChild(el('div', { className: 'tl-vault',
-        style: { fontSize: '9px', color: '#8E6BBF' } },
-        '⚡ ' + vparts.join(' ')));
-    } else {
-      col.appendChild(el('div', { className: 'tl-vault' }, ''));
-    }
-
-    // Net new uniques
-    if (day.netUniqueGain > 0) {
-      col.appendChild(el('div', { className: 'tl-new-uniques',
-        style: { color: 'var(--color-green)', fontWeight: '700' } },
-        `+${day.netUniqueGain}`));
-    } else {
-      col.appendChild(el('div', { className: 'tl-new-uniques' }, ''));
-    }
-
-    // Stars earned
-    col.appendChild(el('div', { className: 'tl-stars-earned',
-      style: { fontSize: '9px', color: '#F5C842' } },
-      day.starsEarned > 0 ? `+${day.starsEarned}★` : ''));
-
-    // Stars spent
-    if (day.starsSpent > 0) {
-      col.appendChild(el('div', { className: 'tl-stars-spent',
-        style: { color: 'var(--color-red)', fontSize: '9px' } },
-        `−${day.starsSpent}★`));
-    } else {
-      col.appendChild(el('div', { className: 'tl-stars-spent' }, ''));
-    }
-
-    strip.appendChild(col);
-  });
-
-  scroll.appendChild(strip);
-  container.appendChild(scroll);
-}
-
-// ── 3. Cumulative Progress Chart ─────────────────────────────────────────
+// ── 2. Cumulative Progress Chart ─────────────────────────────────────────
 
 function renderProgressChart(container, r, vaultConfig) {
   if (!container) return;
@@ -1185,242 +1268,6 @@ function renderWaterfall(chartEl, summaryEl, r) {
         stroke: '#C8B89A', 'stroke-width': '1', 'stroke-dasharray': '3,2',
       }));
     }
-  });
-}
-
-// ── 7. Strategy Comparison ───────────────────────────────────────────────
-
-/**
- * The 4 key spending scenarios mapped to preset names, with human-readable
- * descriptions of what each scenario means in plain game terms.
- */
-const SCENARIO_CARDS = [
-  {
-    preset:      'Spend Greedily',
-    icon:        '⚡',
-    scenarioTag: 'Spend Immediately',
-    question:    'What if you buy packs as soon as you can afford them?',
-    tradeoff:    'Maximum pack count, but stars get spread across all tiers — including cheap 3★ packs that may not be the best value.',
-    tip:         'Good for early collection, but leaves fewer stars for high-value 5★ packs later.',
-  },
-  {
-    preset:      '5★ Only',
-    icon:        '🏆',
-    scenarioTag: 'Best Packs Only',
-    question:    'What if you only ever open 5★ Vault packs (800★ each)?',
-    tradeoff:    'Every purchase guarantees a new Legendary sticker — but you need 800 stars per pack, so you open far fewer packs total.',
-    tip:         'Pay attention to whether you ever reach 800★. If not, this strategy earns zero vault stickers.',
-  },
-  {
-    preset:      'End-Season Blitz',
-    icon:        '⏰',
-    scenarioTag: 'Last-Minute Splurge',
-    question:    'What if you hoard stars all season and spend everything in the final 5 days?',
-    tradeoff:    'You enter the end-season with the most stars possible, spending 5★ → 4★ → 3★. Stars are used efficiently but you lose the chance to compound early vault gains.',
-    tip:         'Strong on high-star seeds. Compare its final star balance vs Spend Greedily to see how much was hoarded.',
-  },
-  {
-    preset:      'Hoard Then Spend',
-    icon:        '📦',
-    scenarioTag: 'Mid-Season Inflection',
-    question:    'What if you wait until the midpoint (Day 26) before opening any Vault packs?',
-    tradeoff:    'A balance between accumulating stars early and having time to benefit from newly collected stickers. The progress chart will show a visible acceleration at Day 26.',
-    tip:         'A middle ground: more stars than Spend Greedily but more time to use them than End-Season Blitz.',
-  },
-];
-
-function renderStrategyComparison(tbody, seasonResult, comparison) {
-  // tbody here is actually the parent container — we need the full section
-  if (!tbody || !comparison) return;
-
-  // Walk up to find the table and its wrapper so we can prepend scenario cards
-  const table = tbody.closest('table');
-  const section = table ? table.closest('section') : null;
-
-  // ── Build / refresh the scenario card strip ──────────────────────────────
-  const existingStrip = section ? section.querySelector('.scenario-strip') : null;
-  if (existingStrip) existingStrip.remove();
-
-  const presetRes  = comparison.presetResults;
-  const userResult = comparison.userSeasonResult;
-  const userLabel  = comparison.userPresetLabel;
-
-  if (section) {
-    const strip = el('div', { className: 'scenario-strip' });
-
-    const neverSpend = presetRes['Never Spend'];
-    const baselineUnique = neverSpend ? neverSpend.finalUniqueCount : 0;
-
-    SCENARIO_CARDS.forEach(card => {
-      const res = presetRes[card.preset];
-      if (!res) return;
-
-      const unique      = res.finalUniqueCount;
-      const starsSpent  = res.starsSpentByTier.tier3 + res.starsSpentByTier.tier4 + res.starsSpentByTier.tier5;
-      const pct         = Math.round(unique / 108 * 100);
-      const gain        = unique - baselineUnique;
-      const efficiency  = starsSpent > 0 ? Math.round(gain / starsSpent * 100) : 0;
-      const color       = resolveColor(presetColorVar(card.preset));
-      const isUser      = userLabel === card.preset;
-      const complete    = unique === 108;
-
-      const cardEl = el('div', {
-        className: 'scenario-card' + (isUser ? ' scenario-card--active' : '') + (complete ? ' scenario-card--complete' : ''),
-        style: { borderTopColor: color },
-      });
-
-      // Header row
-      cardEl.appendChild(el('div', { className: 'sc-header' },
-        el('span', { className: 'sc-icon' }, card.icon),
-        el('span', { className: 'sc-tag', style: { color } }, card.scenarioTag),
-        isUser ? el('span', { className: 'sc-you-badge' }, '▶ Your Config') : null,
-      ));
-
-      // Question
-      cardEl.appendChild(el('p', { className: 'sc-question' }, card.question));
-
-      // Key metrics row
-      const metricsRow = el('div', { className: 'sc-metrics' });
-
-      // Sticker count + progress bar
-      const barWrap = el('div', { className: 'sc-bar-wrap' });
-      const barTrack = el('div', { className: 'sc-bar-track' });
-      const barFill  = el('div', {
-        className: 'sc-bar-fill',
-        style: { width: pct + '%', background: color },
-      });
-      barTrack.appendChild(barFill);
-      barWrap.appendChild(el('div', { className: 'sc-bar-label' },
-        el('strong', { style: { color } }, `${unique} / 108`),
-        el('span', { className: 'sc-pct' }, ` (${pct}%)${complete ? ' ✓ Complete!' : ''}`),
-      ));
-      barWrap.appendChild(barTrack);
-      metricsRow.appendChild(barWrap);
-
-      // Stats grid
-      const statsGrid = el('div', { className: 'sc-stats-grid' });
-      const addStat = (label, value, highlight) => {
-        const item = el('div', { className: 'sc-stat' });
-        item.appendChild(el('div', { className: 'sc-stat-label' }, label));
-        const v = el('div', { className: 'sc-stat-value' + (highlight ? ' sc-stat-highlight' : '') }, value);
-        if (highlight) v.style.color = color;
-        item.appendChild(v);
-        statsGrid.appendChild(item);
-      };
-
-      addStat('Stars spent',   `${fmt(starsSpent)}★`);
-      addStat('Stars left',    `${fmt(res.finalStars)}★`);
-      addStat('Vault 5★ packs', String(res.vaultPurchasesByTier.tier5), true);
-      addStat('Vault 4★ packs', String(res.vaultPurchasesByTier.tier4));
-      addStat('Vault 3★ packs', String(res.vaultPurchasesByTier.tier3));
-      addStat('Gain vs no vault', gain > 0 ? `+${gain} stickers` : '—', gain > 0);
-      if (starsSpent > 0) {
-        addStat('Efficiency',    `${efficiency} stk/100★`);
-      }
-
-      metricsRow.appendChild(statsGrid);
-      cardEl.appendChild(metricsRow);
-
-      // Tradeoff + tip
-      cardEl.appendChild(el('p', { className: 'sc-tradeoff' }, `⚖️ ${card.tradeoff}`));
-      cardEl.appendChild(el('p', { className: 'sc-tip' }, `💡 ${card.tip}`));
-
-      strip.appendChild(cardEl);
-    });
-
-    // Insert strip before the table wrapper
-    const tableWrapper = section.querySelector('.table-wrapper');
-    if (tableWrapper) {
-      section.insertBefore(strip, tableWrapper);
-    } else {
-      section.appendChild(strip);
-    }
-  }
-
-  // ── Table rows (legacy compact view below the cards) ─────────────────────
-  tbody.innerHTML = '';
-
-  const isCustom = userLabel === 'Custom';
-  const rows = [];
-
-  PRESET_ORDER.forEach(preset => {
-    const res = presetRes[preset];
-    if (!res) return;
-    const useUserResult = !isCustom && preset === userLabel;
-    const result = useUserResult ? userResult : res;
-    rows.push({
-      label:        preset,
-      uniqueCount:  result.finalUniqueCount,
-      starsSpent:   result.starsSpentByTier.tier3 + result.starsSpentByTier.tier4 + result.starsSpentByTier.tier5,
-      vault3:       result.vaultPurchasesByTier.tier3,
-      vault4:       result.vaultPurchasesByTier.tier4,
-      vault5:       result.vaultPurchasesByTier.tier5,
-      starsLeft:    result.finalStars,
-      annotation:   PRESET_ANNOTATIONS[preset],
-      isUserRow:    useUserResult,
-    });
-  });
-
-  if (isCustom) {
-    rows.push({
-      label:       'Your Config',
-      uniqueCount:  userResult.finalUniqueCount,
-      starsSpent:   userResult.starsSpentByTier.tier3 + userResult.starsSpentByTier.tier4 + userResult.starsSpentByTier.tier5,
-      vault3:       userResult.vaultPurchasesByTier.tier3,
-      vault4:       userResult.vaultPurchasesByTier.tier4,
-      vault5:       userResult.vaultPurchasesByTier.tier5,
-      starsLeft:    userResult.finalStars,
-      annotation:   PRESET_ANNOTATIONS['Your Config'],
-      isUserRow:    true,
-    });
-  }
-
-  const bestUnique = Math.max(...rows.map(r => r.uniqueCount));
-
-  rows.forEach(row => {
-    const isBest = row.uniqueCount === bestUnique;
-    const color  = presetColorVar(row.label === 'Your Config' ? 'Custom' : row.label);
-    const tr     = el('tr', { className: isBest ? 'row-best' : '' });
-
-    if (isBest) {
-      tr.style.background = 'rgba(125, 170, 114, 0.15)';
-      tr.style.fontWeight = '700';
-    }
-    if (row.isUserRow) {
-      tr.style.borderLeft = `3px solid ${resolveColor(color)}`;
-    }
-
-    // Completion %
-    const compPct = (row.uniqueCount / 108 * 100).toFixed(1);
-
-    // Inline bar cell
-    const barCell  = el('td', { className: 'comparison-bar-cell' });
-    const barTrack = el('div', { className: 'comparison-bar-track' });
-    const barFill  = el('div', {
-      className: 'comparison-bar-fill',
-      style: { width: compPct + '%', background: resolveColor(color) },
-    });
-    barTrack.appendChild(barFill);
-    barCell.appendChild(el('span', { className: 'comparison-label',
-      style: { color: resolveColor(color) } }, row.label));
-    barCell.appendChild(barTrack);
-
-    tr.append(
-      barCell,
-      el('td', { className: 'num-cell' }, `${row.uniqueCount} / 108${isBest ? ' ✓' : ''}`),
-      el('td', { className: 'num-cell' }, `${compPct}%`),
-      el('td', { className: 'num-cell' }, `${fmt(row.starsSpent)}★`),
-      el('td', { className: 'num-cell' }, String(row.vault5)),
-      el('td', { className: 'num-cell' }, `${fmt(row.starsLeft)}★`),
-    );
-
-    tbody.appendChild(tr);
-
-    const annotationTr = el('tr', { className: 'annotation-row' });
-    const annotationTd = el('td', { colSpan: '6', className: 'annotation-cell' },
-      el('em', {}, row.annotation));
-    annotationTr.appendChild(annotationTd);
-    tbody.appendChild(annotationTr);
   });
 }
 

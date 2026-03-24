@@ -1496,7 +1496,329 @@ tbody tr:hover {
 }
 
 
-/* ── Stat cards grid (Season Summary) ────────────────────────────────────── */
+/* ── Season Log — paginated table ────────────────────────────────────────── */
+
+.history-log-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.history-log-header .subsection-title {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+  flex: 1;
+}
+
+.history-log-count {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: #8B6040;
+  font-style: italic;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+
+/* ── Column widths ── */
+
+.history-table .col-season   { width: 62px;    text-align: center; }
+.history-table .col-preset   { min-width: 148px; }
+.history-table .col-stickers { min-width: 112px; }
+.history-table .col-stars    { min-width: 96px;  white-space: nowrap; }
+.history-table .col-vault    { min-width: 82px;  }
+.history-table .col-result   { width: 72px;    text-align: center; }
+
+/* ── Row modifiers ── */
+
+.history-row--best {
+  background: rgba(125, 170, 114, 0.09) !important;
+}
+
+.history-row--best .season-num {
+  color: #2E6B25;
+}
+
+/* ── Shared cell padding ── */
+
+.history-cell {
+  padding: 9px 10px;
+  vertical-align: middle;
+}
+
+/* ── Season # cell ── */
+
+.history-cell--season {
+  text-align: center;
+}
+
+.season-num {
+  display: block;
+  font-family: 'Fredoka One', serif;
+  font-size: 0.9rem;
+  color: var(--color-brown);
+  line-height: 1.2;
+}
+
+.best-badge {
+  display: inline-block;
+  margin-top: 3px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.58rem;
+  font-weight: 700;
+  background: var(--color-gold);
+  color: #5A3A00;
+  border-radius: 8px;
+  padding: 1px 5px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* ── Preset + seed cell ── */
+
+.preset-pill {
+  display: inline-block;
+  font-family: 'Fredoka One', serif;
+  font-size: 0.75rem;
+  padding: 2px 9px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.history-seed {
+  font-family: 'Courier New', monospace;
+  font-size: 0.63rem;
+  color: #A08060;
+  margin-top: 3px;
+  letter-spacing: 0.2px;
+}
+
+/* ── Stickers + bar cell ── */
+
+.sticker-count-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.sticker-count {
+  font-family: 'Fredoka One', serif;
+  font-size: 1rem;
+  color: var(--color-brown);
+  line-height: 1;
+}
+
+.sticker-of {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.7rem;
+  color: #8B6040;
+}
+
+.sticker-pct {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.68rem;
+  color: #8B6040;
+  font-style: italic;
+  margin-left: auto;
+}
+
+.history-bar-track {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(107, 68, 35, 0.11);
+  overflow: hidden;
+  border: 1px solid rgba(107, 68, 35, 0.1);
+}
+
+.history-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* ── Stars cell ── */
+
+.stars-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.65;
+  color: var(--color-brown);
+}
+
+.stars-sign {
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1;
+  width: 10px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.stars-sign--spent { color: var(--color-red); }
+.stars-sign--left  { color: var(--color-green); }
+.stars-left-val    { color: #B88A00; font-weight: 700; }
+
+/* ── Vault cell ── */
+
+.vault-pill {
+  display: inline-block;
+  font-family: 'Fredoka One', serif;
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin: 1px 2px 1px 0;
+  white-space: nowrap;
+  border: 1px solid;
+}
+
+.vault-pill--3 {
+  background: rgba(91, 155, 213, 0.14);
+  color: #2A6496;
+  border-color: rgba(91, 155, 213, 0.40);
+}
+
+.vault-pill--4 {
+  background: rgba(142, 107, 191, 0.14);
+  color: #5C3890;
+  border-color: rgba(142, 107, 191, 0.40);
+}
+
+.vault-pill--5 {
+  background: rgba(245, 200, 66, 0.18);
+  color: #7A5800;
+  border-color: rgba(245, 200, 66, 0.50);
+}
+
+.vault-none {
+  color: #B0A090;
+  font-size: 0.85rem;
+}
+
+/* ── Result cell ── */
+
+.history-cell--result {
+  text-align: center;
+}
+
+.result-complete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(125, 170, 114, 0.18);
+  color: #2E6B25;
+  font-family: 'Fredoka One', serif;
+  font-size: 1.15rem;
+  border: 2px solid #7DAA72;
+}
+
+.result-missing {
+  font-family: 'Fredoka One', serif;
+  font-size: 1rem;
+  color: var(--color-red);
+  line-height: 1.1;
+}
+
+.result-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.6rem;
+  color: #C0392B;
+  opacity: 0.75;
+}
+
+
+/* ── Pagination ───────────────────────────────────────────────────────────── */
+
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 0 2px;
+  flex-wrap: wrap;
+}
+
+.page-nav-btn {
+  font-family: 'Fredoka One', serif;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 4px 11px;
+  background: var(--color-cream);
+  border: 1.5px solid var(--color-brown);
+  border-radius: 6px;
+  color: var(--color-brown);
+  cursor: pointer;
+  min-width: 34px;
+  transition: background 80ms ease, transform 60ms ease;
+}
+
+.page-nav-btn:hover:not(:disabled) {
+  background: #EEE0C0;
+  transform: translateY(-1px);
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.page-num-btn {
+  font-family: 'Fredoka One', serif;
+  font-size: 0.82rem;
+  padding: 5px 9px;
+  min-width: 32px;
+  background: transparent;
+  border: 1.5px solid rgba(107, 68, 35, 0.22);
+  border-radius: 5px;
+  color: var(--color-brown);
+  cursor: pointer;
+  transition: background 80ms ease, border-color 80ms ease;
+}
+
+.page-num-btn:hover:not(.page-num-btn--active) {
+  background: rgba(107, 68, 35, 0.08);
+  border-color: rgba(107, 68, 35, 0.40);
+  transform: translateY(-1px);
+}
+
+.page-num-btn--active {
+  background: var(--color-brown);
+  color: var(--color-cream);
+  border-color: var(--color-brown);
+  cursor: default;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.page-ellipsis {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  color: #8B6040;
+  padding: 0 2px;
+  line-height: 2.2;
+  pointer-events: none;
+  user-select: none;
+}
+
+.page-range {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: #8B6040;
+  font-style: italic;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+
+
 
 .stat-cards-grid {
   display: grid;
@@ -1548,71 +1870,6 @@ tbody tr:hover {
 .stat-card.season-incomplete .stat-card-value {
   color: var(--color-red);
 }
-
-
-/* ── Daily Timeline ───────────────────────────────────────────────────────── */
-
-.timeline-scroll-wrapper {
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 6px;
-  border-radius: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-brown) transparent;
-}
-
-.timeline-track {
-  display: flex;
-  flex-direction: row;
-  gap: 4px;
-  min-width: max-content;
-  padding: 4px 2px;
-}
-
-.day-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 52px;
-  padding: 6px 4px;
-  border: 1.5px solid rgba(107, 68, 35, 0.2);
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.5);
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.65rem;
-  color: var(--color-brown);
-}
-
-/* Vault start day gets amber top accent */
-.day-column[data-vault-start="true"] {
-  border-top: 3px solid var(--color-gold);
-  background: rgba(245, 200, 66, 0.08);
-}
-
-/* Days where star balance after = 0 get a pale red background */
-.day-column[data-zero-stars="true"] {
-  background: rgba(192, 57, 43, 0.07);
-}
-
-.day-col-number {
-  font-family: 'Fredoka One', serif;
-  font-size: 0.75rem;
-  color: var(--color-brown);
-  font-weight: 400;
-}
-
-.day-col-login {
-  font-family: 'Fredoka One', serif;
-  font-size: 0.7rem;
-  color: var(--color-sky);
-}
-
-.day-col-challenge { color: var(--color-green); }
-.day-col-vault     { color: var(--color-purple); }
-.day-col-uniques   { color: var(--color-green); font-weight: 700; }
-.day-col-stars-earned { color: var(--color-gold); }
-.day-col-stars-spent  { color: var(--color-red); }
 
 
 /* ── Cumulative Progress Chart ────────────────────────────────────────────── */
@@ -1807,18 +2064,6 @@ tbody tr:hover {
 }
 
 
-/* ── Strategy Comparison ──────────────────────────────────────────────────── */
-
-#comparison-table {
-  min-width: 560px;
-}
-
-#comparison-table th:first-child,
-#comparison-table td:first-child {
-  min-width: 140px;
-}
-
-
 /* =============================================================================
    12. TOOLTIP BASE
    ============================================================================= */
@@ -1862,28 +2107,24 @@ tbody tr:hover {
    ============================================================================= */
 
 #stats-section,
-.timeline-scroll-wrapper,
 .table-wrapper {
   scrollbar-width: thin;
   scrollbar-color: var(--color-brown) rgba(107, 68, 35, 0.1);
 }
 
 #stats-section::-webkit-scrollbar,
-.timeline-scroll-wrapper::-webkit-scrollbar,
 .table-wrapper::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
 #stats-section::-webkit-scrollbar-thumb,
-.timeline-scroll-wrapper::-webkit-scrollbar-thumb,
 .table-wrapper::-webkit-scrollbar-thumb {
   background: var(--color-brown);
   border-radius: 3px;
 }
 
 #stats-section::-webkit-scrollbar-track,
-.timeline-scroll-wrapper::-webkit-scrollbar-track,
 .table-wrapper::-webkit-scrollbar-track {
   background: rgba(107, 68, 35, 0.1);
 }

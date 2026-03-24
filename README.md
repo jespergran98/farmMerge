@@ -108,3 +108,15 @@ Stars can be spent in the Star Vault to buy sticker packs that each guarantee on
 | 3-star     | 250 stars | 4              | 1× new 3-star sticker  | 3 slots, same odds as normal 3-star pack |
 | 4-star     | 500 stars | 5              | 1× new 4-star sticker  | 4 slots, same odds as normal 4-star pack |
 | 5-star     | 800 stars | 6              | 1× new 5-star sticker  | 5 slots, same odds as normal 5-star pack |
+
+---
+
+# Farm Merge Valley — Simulator Implementation Guide
+
+The simulator's core purpose is to answer one question visually: **does it matter when and how you spend your stars?** The user runs seasons, swaps between vault strategies, and the stats panel accumulates evidence across every completed season so the answer becomes unmistakably clear.
+
+All mechanics, probabilities, and numeric values come exclusively from `README.md`. Nothing is invented.
+
+---
+
+Remove the entire "Strategy Comparison (this seed)" section and all logic within it, and the entire Daily Timeline and all logic within it from all files. Perform an str_replace and deliver the cleaned up code.

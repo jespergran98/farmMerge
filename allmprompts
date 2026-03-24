@@ -104,3 +104,7 @@ Another mode buys 5 stars as soon as it reaches 800 stars and can afford it. Imp
 ---
 
 Do a massive visual overhaul to the event log, it needs to visually represent what's happening, instead of the current "log" display it more visually, which vault was opened? Daily login design, actual sticker designs instead of just "★1", all within a neat perfect display.
+
+---
+
+Update the logic when the simulation runs at "max speed", currently there is a short delay after rounds that needs to be removed from max speed, when the simulation runs at max speed, this delay needs to be removed. Also during max speed nothing visually updates in the top 100 svh, update "rounds" and "stars" so even max has some visual updates in the top 100%. (Animate even more on max speed if it has barely no impact on the simulation speed when it's being simulated at run time)

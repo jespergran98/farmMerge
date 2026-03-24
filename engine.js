@@ -7,8 +7,6 @@
  *   SimulatorEngine        — main class
  *   seasonHistory          — mutable array of SeasonRecord objects
  *   clearSeasonHistory()   — wipes the array in-place
- *   currentSeasonComparison — null until the first season completes; updated
- *                             after every completed season
  *   PRESETS                — five named VaultConfig objects
  *   rarityOf(id)           — helper: sticker ID → rarity number (1–5)
  */
@@ -154,13 +152,6 @@ export const seasonHistory = [];
 export function clearSeasonHistory() {
   seasonHistory.length = 0;
 }
-
-/**
- * Set to null before the first season completes.
- * After every completed season this is replaced with a CurrentSeasonComparison
- * object containing all five preset results for the same seed + challenge.
- */
-export let currentSeasonComparison = null;
 
 // ════════════════════════════════════════════════════════════════════════════
 // Internal helpers
@@ -652,18 +643,6 @@ export class SimulatorEngine {
     // Append season record
     const seasonIndex = seasonHistory.length + 1;
     seasonHistory.push(this._buildSeasonRecord(result, seasonIndex));
-
-    // Run all five preset strategies on the same seed + challenge setting
-    const presetResults = _runAllPresets(this.config.seed, this.config.challengeSetting);
-
-    currentSeasonComparison = {
-      seed:             this.config.seed,
-      challengeSetting: this.config.challengeSetting,
-      presetResults,
-      userVaultConfig:  cloneVaultConfig(this.config.vaultConfig),
-      userSeasonResult: result,
-      userPresetLabel:  getPresetLabel(this.config.vaultConfig),
-    };
   }
 
   // ── Internal: aggregate builders ─────────────────────────────────────────
@@ -739,29 +718,4 @@ export class SimulatorEngine {
       completed:           seasonResult.finalUniqueCount === 108,
     };
   }
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// Background strategy comparison
-// ════════════════════════════════════════════════════════════════════════════
-
-/**
- * Run all five preset strategies synchronously on the given seed + challenge
- * setting. Returns an object keyed by preset name → SeasonResult.
- *
- * These engines use _background: true so they never mutate seasonHistory
- * or currentSeasonComparison.
- */
-function _runAllPresets(seed, challengeSetting) {
-  const results = {};
-  for (const [name, presetConfig] of Object.entries(PRESETS)) {
-    const engine = new SimulatorEngine({
-      seed,
-      challengeSetting,
-      vaultConfig:  cloneVaultConfig(presetConfig),
-      _background:  true,
-    });
-    results[name] = engine.runAll();
-  }
-  return results;
 }

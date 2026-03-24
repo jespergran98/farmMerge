@@ -512,28 +512,7 @@
         </div>
       </section>
 
-      <!-- ── 2. Daily Timeline ──────────────────────────────── -->
-      <section
-        id="stats-daily-timeline"
-        class="stats-subsection"
-        aria-label="Day-by-day simulation timeline">
-        <h3 class="subsection-title">Daily Timeline</h3>
-        <div id="daily-timeline-scroll" class="timeline-scroll-wrapper">
-          <div
-            id="daily-timeline-track"
-            class="timeline-track"
-            aria-label="50-day simulation timeline">
-            <!--
-              50 day-column elements injected by stats.js.
-              Each carries data-day, and optionally
-              data-vault-start and data-zero-stars attributes
-              for conditional styling via CSS attribute selectors.
-            -->
-          </div>
-        </div>
-      </section>
-
-      <!-- ── 3. Cumulative Progress Chart ──────────────────── -->
+      <!-- ── 2. Cumulative Progress Chart ──────────────────── -->
       <section
         id="stats-cumulative-chart"
         class="stats-subsection"
@@ -769,45 +748,6 @@
               Every segment labelled with numeric value.
             -->
           </svg>
-        </div>
-      </section>
-
-      <!-- ── 7. Strategy Comparison ─────────────────────────── -->
-      <section
-        id="stats-strategy-comparison"
-        class="stats-subsection"
-        aria-label="Strategy comparison table for this seed">
-        <h3 class="subsection-title">Strategy Comparison (this seed)</h3>
-        <p class="subsection-hint">
-          Same seed and challenge setting; only vault strategy differs.
-          Best unique count highlighted in green.
-        </p>
-
-        <div class="table-wrapper">
-          <table id="comparison-table" aria-label="Strategy comparison: unique stickers and star economy per preset">
-            <thead>
-              <tr>
-                <th scope="col">Config</th>
-                <th scope="col">Unique stickers</th>
-                <th scope="col">Stars spent</th>
-                <th scope="col">3★ packs</th>
-                <th scope="col">4★ packs</th>
-                <th scope="col">5★ packs</th>
-                <th scope="col">Stars left</th>
-              </tr>
-            </thead>
-            <tbody id="comparison-tbody">
-              <!--
-                Injected by stats.js.
-                Fixed row order: Spend Greedily, 5★ Only, Hoard Then Spend,
-                End-Season Blitz, Never Spend, [Your Config if custom].
-                5 rows if user matches a preset; 6 if custom.
-                Best-unique row gets class "row-best".
-                Each row includes an inline progress bar proportional to 108.
-                One-sentence annotation below each row.
-              -->
-            </tbody>
-          </table>
         </div>
       </section>
 
